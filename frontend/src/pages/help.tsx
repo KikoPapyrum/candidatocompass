@@ -1,15 +1,21 @@
+import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
 import Stack from '@mui/material/Stack'
 import Typography from '@mui/material/Typography'
 import { Link as RouterLink } from 'react-router'
 
 import { useAuthStore } from '../auth/auth-store'
+import { CompassMark } from '../components/compass-mark'
 
 export function HelpPage() {
   const token = useAuthStore((state) => state.token)
   return (
     <Stack sx={{ minHeight: '100dvh', bgcolor: 'background.default', alignItems: 'center' }}>
-      <Stack sx={{ width: '100%', maxWidth: 480, bgcolor: 'background.paper', minHeight: '100dvh', p: 3 }} spacing={2}>
+      <Stack sx={{ width: '100%', maxWidth: 480, bgcolor: 'background.paper', minHeight: '100dvh' }} spacing={2}>
+        <Box sx={{ bgcolor: '#111111', px: 3, py: 2 }}>
+          <CompassMark height={44} />
+        </Box>
+        <Stack spacing={2} sx={{ px: 3, pb: 3 }}>
         <Typography variant="h5">Bienvenido a Ready to Work</Typography>
         <Typography>
           Desde esta aplicación te registras como candidato. Te pediremos tus datos personales y los documentos necesarios para la contratación.
@@ -27,6 +33,7 @@ export function HelpPage() {
         <Button component={RouterLink} to={token ? '/datos' : '/auth'} variant="contained">
           {token ? 'Volver a los datos' : 'Ir al acceso'}
         </Button>
+        </Stack>
       </Stack>
     </Stack>
   )

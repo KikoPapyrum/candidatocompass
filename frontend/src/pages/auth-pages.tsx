@@ -7,17 +7,18 @@ import Typography from '@mui/material/Typography'
 import { useState, type FormEvent, type ReactNode } from 'react'
 import { Link as RouterLink, useNavigate, useSearchParams } from 'react-router'
 
-import { axiosInstance } from '../lib/axios'
 import { useAuthStore } from '../auth/auth-store'
+import { CompassMark } from '../components/compass-mark'
+import { axiosInstance } from '../lib/axios'
 import { isValidNationalId, isValidPassword } from '../utils/validators'
 
 export function AuthFrame({ title, children }: { title: string; children: ReactNode }) {
   return (
     <Box sx={{ minHeight: '100dvh', display: 'flex', justifyContent: 'center', bgcolor: 'background.default' }}>
-      <Box sx={{ width: '100%', maxWidth: 480, minHeight: '100dvh', bgcolor: 'primary.main', color: 'common.white', px: 3, py: 4 }}>
-        <Typography variant="overline">Compass Group</Typography>
-        <Typography variant="h4" sx={{ fontWeight: 700, mb: 3 }}>Ready to Work</Typography>
-        <Box sx={{ bgcolor: 'background.paper', color: 'text.primary', borderRadius: 3, p: 3 }}>
+      <Box sx={{ width: '100%', maxWidth: 480, minHeight: '100dvh', bgcolor: '#111111', color: 'common.white', px: 3, py: 4 }}>
+        <CompassMark height={52} />
+        <Typography variant="h4" sx={{ fontWeight: 700, mt: 2, mb: 3 }}>Ready to Work</Typography>
+        <Box sx={{ bgcolor: 'background.paper', color: 'text.primary', borderRadius: 0.5, p: 3 }}>
           <Typography variant="h5" sx={{ mb: 2 }}>{title}</Typography>
           {children}
         </Box>

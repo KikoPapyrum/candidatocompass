@@ -17,6 +17,7 @@ import { useEffect, useState } from 'react'
 import { Navigate, Outlet, useLocation, useNavigate } from 'react-router'
 
 import { useAuthStore } from '../auth/auth-store'
+import { CompassMark } from '../components/compass-mark'
 import { useCandidateStore } from '../store/candidate-store'
 
 const STEPS = [
@@ -69,9 +70,10 @@ export function AppShell() {
             <IconButton color="inherit" edge="start" onClick={() => setOpen(true)} aria-label="Menú">
               <MenuIcon />
             </IconButton>
-            <Box sx={{ ml: 1 }}>
+            <CompassMark height={36} />
+            <Box sx={{ ml: 1.5 }}>
               <Typography variant="h6" sx={{ lineHeight: 1.1 }}>Ready to Work</Typography>
-              <Typography variant="caption">{today}</Typography>
+              <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.72)' }}>{today}</Typography>
             </Box>
           </Toolbar>
         </AppBar>
@@ -90,8 +92,11 @@ export function AppShell() {
           <Outlet />
         </Box>
         <Drawer open={open} onClose={() => setOpen(false)}>
-          <Box sx={{ width: 260, p: 2 }} role="presentation">
-            <Typography variant="h6">Compass Group</Typography>
+          <Box sx={{ width: 280 }} role="presentation">
+            <Box sx={{ bgcolor: '#111111', px: 2, py: 2 }}>
+              <CompassMark height={44} />
+            </Box>
+            <Box sx={{ px: 2, pt: 2 }}>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>{candidate.first_name}</Typography>
             <List>
               <ListItemButton onClick={() => { setOpen(false); navigate('/ayuda') }}>
@@ -101,6 +106,7 @@ export function AppShell() {
                 <ListItemText primary="Salir de la app" />
               </ListItemButton>
             </List>
+            </Box>
           </Box>
         </Drawer>
       </Box>
