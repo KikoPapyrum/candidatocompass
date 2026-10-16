@@ -1,0 +1,82 @@
+# Document classes requested in the simulator.
+# compass_typology: document type created with POST /items
+# compass_flag: metadata field on the Empleado folder (request Sí/No)
+# from_template: create from Compass template (metadata only, no file)
+
+document_classes:
+  - id: national_identity_document_front
+    label: DNI Anverso
+    kulteo_flags: [DNI_ANVERSO]
+    compass_typology: DNI Anverso
+    compass_flag: DNI_ANVERSO
+  - id: national_identity_document_back
+    label: DNI Reverso
+    kulteo_flags: [DNI_REVERSO]
+    compass_typology: DNI Reverso
+    compass_flag: DNI_REVERSO
+  - id: PASAPORTE_ORIGEN_ANVERSO
+    label: Pasaporte Origen Anverso
+    kulteo_flags: [PASAPORTE_ORIGEN_ANVERSO]
+    compass_typology: Pasaporte Origen Anverso
+    compass_flag: PASAPORTE_ORIGEN_ANVERSO
+  - id: PASAPORTE_ORIGEN_REVERSO
+    label: Pasaporte Origen Reverso
+    kulteo_flags: [PASAPORTE_ORIGEN_REVERSO]
+    compass_typology: Pasaporte Origen Reverso
+    compass_flag: PASAPORTE_ORIGEN_REVERSO
+  - id: certificate_of_negative_sexual_offenses
+    label: Certificado Delitos Sexuales
+    kulteo_flags: [CERTIFICADO_DELITOS_SEXUALES]
+    compass_typology: Certificado Delitos Sexuales
+    compass_flag: CERTIFICADO_DELITOS_SEXUALES
+  - id: CERTIFICADO_DELITOS_SEXUALES_EXTRANJERO
+    label: Certificado Delitos Sexuales Extranjero
+    kulteo_flags: [CERTIFICADO_DELITOS_SEXUALES_EXTRANJERO]
+    compass_typology: Certificado Delitos Sexuales Extranjero
+    compass_flag: CERTIFICADO_DELITOS_SEXUALES_EXTRANJERO
+  - id: dietitian_diploma
+    label: Título
+    kulteo_flags: [TITULO]
+    compass_typology: Título
+    compass_flag: dietitian_diploma
+  - id: drivers_license_front
+    label: Carné Anverso
+    kulteo_flags: [CARNE_ANVERSO]
+    compass_typology: Carné Anverso
+    compass_flag: drivers_license_front
+  - id: drivers_license_back
+    label: Carné Reverso
+    kulteo_flags: [CARNE_REVERSO]
+    compass_typology: Carné Reverso
+    compass_flag: drivers_license_back
+  - id: unemployment_certificate
+    label: DARDE
+    kulteo_flags: [DARDE]
+    compass_typology: DARDE
+    compass_flag: unemployment_certificate
+  - id: cv
+    label: CV
+    kulteo_flags: [CV]
+    compass_typology: CV
+    compass_flag: CV
+  - id: disability_certificate
+    label: Certificado Minusvalía
+    kulteo_flags: [CERTIFICADO_MINUSVALIA]
+    compass_typology: Certificado Minusvalía
+    compass_flag: disability_certificate
+  - id: CERTIFICADO_VIOLENCIA_GENERO
+    label: Certificado Violencia de Género
+    kulteo_flags: [CERTIFICADO_VIOLENCIA_GENERO]
+    compass_typology: Certificado Violencia de Género
+    compass_flag: CERTIFICADO_VIOLENCIA_GENERO
+  - id: CERTIFICADO_EXCLUSION_SOCIAL
+    label: Certificado Exclusión Social
+    kulteo_flags: [CERTIFICADO_EXCLUSION_SOCIAL]
+    compass_typology: Certificado Exclusión Social
+    compass_flag: CERTIFICADO_EXCLUSION_SOCIAL
+  - id: FORMULARIO_145
+    label: Formulario 145
+    kulteo_flags: [FORMULARIO_145]
+    compass_typology: Formulario 145
+    compass_flag: FORMULARIO_145
+    from_template: true
