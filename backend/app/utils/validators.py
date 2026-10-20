@@ -97,4 +97,4 @@ def is_amount(value: str | None) -> bool:
     """Allow an empty amount or a number with an optional decimal comma."""
     if value is None or str(value).strip() == "":
         return True
-    return bool(re.fullmatch(r"\d+([,.]\d{1,2})?", str(value).strip()))
+    return bool(re.fullmatch(r"\d+(,\d+)?", str(value).strip()))

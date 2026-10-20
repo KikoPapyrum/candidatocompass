@@ -42,50 +42,98 @@ def _require_option(value: str, catalog: str, label: str) -> None:
         raise DomainError(f"{label} no es válido.")
 
 
-def _clean_children(children: list[Child]) -> list[Child]:
-    cleaned = []
-    for child in children:
-        empty = (
-            not child.birth_date
-            and not child.adoption_date
-            and not any(
-                [
-                    child.disability_33,
-                    child.disability_65,
-                    child.needs_help,
-                    child.lives_only_with_you,
-                ]
-            )
+def _child_has_date(child: Child) -> bool:
+    return bool((child.birth_date or "").strip() or (child.adoption_date or "").strip())
+
+
+def _child_is_empty(child: Child) -> bool:
+    return (
+        not (child.birth_date or "").strip()
+        and not (child.adoption_date or "").strip()
+        and not any([child.disability_33, child.disability_65, child.needs_help, child.lives_only_with_you])
+    )
+
+
+def _validate_children(children: list[Child], single_with_children: bool) -> list[Child]:
+    """Apply the legacy form 145 checks, in the same order."""
+    if single_with_children and (not children or not children[0].lives_only_with_you):
+        raise DomainError(
+            "Debe informar la fecha de nacimiento/adopción en el apartado: HIJOS Y OTROS DESCENDIENTES "
+            "y marcar la casilla COMPUTO POR ENTERO. Si no tiene hijos a su cargo EXCLUSIVAMENTE, "
+            'debe cambiar la Situación Familiar elegida a "Situación familiar distinta de las 2 anteriores".'
         )
-        if empty:
+    for child in children:
+        if _child_is_empty(child):
             continue
-        if (child.disability_33 or child.disability_65 or child.needs_help or child.lives_only_with_you) and not child.birth_date:
-            raise DomainError("Si marcas una casilla de un descendiente, la fecha de nacimiento es obligatoria.")
+        has_date = _child_has_date(child)
+        if child.lives_only_with_you and not has_date:
+            raise DomainError(
+                "Debe informar la fecha de nacimiento/adopción en el apartado: HIJOS Y OTROS DESCENDIENTES "
+                "ya que ha marcado la casilla COMPUTO POR ENTERO. Si no tiene hijos a su cargo EXCLUSIVAMENTE, "
+                "desmarque la casilla COMPUTO POR ENTERO."
+            )
+        if (child.disability_33 or child.disability_65 or child.needs_help) and not has_date:
+            raise DomainError(
+                "Debe informar la fecha de nacimiento/adopción en el apartado: HIJOS Y OTROS DESCENDIENTES "
+                "ya que ha marcado alguna casilla de discapacidad. Si no tiene hijos a su cargo, "
+                "desmarque todas las casillas de discapacidad."
+            )
+        if child.needs_help and not child.disability_33 and not child.disability_65:
+            raise DomainError(
+                "Ha acreditado la necesitad de ayuda de terceras persona o movilida reducida "
+                "pero no ha seleccionado el grado de discapacidad de uno de sus hijos u otros descendientes"
+            )
         if child.disability_33 and child.disability_65:
-            raise DomainError("Un descendiente no puede tener los dos grados de discapacidad a la vez.")
+            raise DomainError(
+                "Debe seleccionar solamente una opción de grado de minusvalia para uno de sus hijos "
+                "ya que ha marcado las dos. Si no tiene hijos a su cargo, desmarque la casilla COMPUTO POR ENTERO."
+            )
         _check_past_date(child.birth_date, "La fecha de nacimiento del descendiente")
         _check_past_date(child.adoption_date, "La fecha de adopción")
-        cleaned.append(child)
+    if single_with_children and (not children or not _child_has_date(children[0])):
+        raise DomainError(
+            "Si ha indicado que sus hijos dependen de Ud, debe de marcar la casilla COMPUTO POR ENTERO "
+            "por cada hijo y poner su fecha de nacimiento/adopción en la seccion: "
+            "HIJOS Y OTROS DESCENDIENTES MENORES DE 25 AÑOS ..."
+        )
+    cleaned = [child for child in children if not _child_is_empty(child)]
     if len(cleaned) > MAX_CHILDREN:
         raise DomainError("Puedes informar como máximo 9 descendientes.")
     return cleaned
 
 
-def _clean_ascendants(ascendants: list[Ascendant]) -> list[Ascendant]:
+def _ascendant_is_empty(person: Ascendant) -> bool:
+    return (
+        not (person.birth_date or "").strip()
+        and not (person.cohabitation_share or "").strip()
+        and not any([person.disability_33, person.disability_65, person.needs_help])
+    )
+
+
+def _validate_ascendants(ascendants: list[Ascendant]) -> list[Ascendant]:
+    """Apply the legacy ascendant date check and drop blank rows."""
+    if ascendants:
+        first = ascendants[0]
+        indicated = (
+            first.disability_33
+            or first.disability_65
+            or first.needs_help
+            or bool((first.cohabitation_share or "").strip())
+        )
+        if not (first.birth_date or "").strip() and indicated:
+            raise DomainError(
+                "Si ha indicado que tiene ascendientes que dependen de Ud.  "
+                "Debe de introducir  su fecha de nacimiento."
+            )
     cleaned = []
     shares = option_ids("ascendantShares")
     for person in ascendants:
-        empty = (
-            not person.birth_date
-            and not person.cohabitation_share
-            and not any([person.disability_33, person.disability_65, person.needs_help])
-        )
-        if empty:
+        if _ascendant_is_empty(person):
             continue
-        if (person.disability_33 or person.disability_65 or person.needs_help or person.cohabitation_share) and not person.birth_date:
-            raise DomainError("Si marcas una casilla de un ascendiente, la fecha de nacimiento es obligatoria.")
         if person.disability_33 and person.disability_65:
-            raise DomainError("Un ascendiente no puede tener los dos grados de discapacidad a la vez.")
+            raise DomainError(
+                "Debe seleccionar solamente una opción de grado de minusvalia para uno de sus ascendientes."
+            )
         if person.cohabitation_share and person.cohabitation_share not in shares:
             raise DomainError("El reparto del mínimo del ascendiente no es válido.")
         _check_past_date(person.birth_date, "La fecha de nacimiento del ascendiente")
@@ -93,6 +141,78 @@ def _clean_ascendants(ascendants: list[Ascendant]) -> list[Ascendant]:
     if len(cleaned) > MAX_ASCENDANTS:
         raise DomainError("Puedes informar como máximo 7 ascendientes.")
     return cleaned
+
+
+def _spouse_id_message(value: str) -> str | None:
+    """Return the legacy DNI/NIE message, or None when the value is acceptable."""
+    national_id = normalize_national_id(value)
+    if len(national_id) < 9:
+        return "Complete el DNI/NIE con todos los digitos."
+    if not re.fullmatch(r"[XYZ]?\d{5,8}[A-Z]", national_id):
+        return "Formato Erroneo"
+    if not is_valid_national_id(national_id):
+        return "DNI/NIE Erroneo"
+    return None
+
+
+def _validate_family(payload: TaxDataUpdate, spouse: str) -> None:
+    single = payload.family_single_with_children
+    married = payload.family_spouse_low_income
+    other = payload.family_other
+    one_choice = (
+        (single and not married and not other)
+        or (not single and married and not other)
+        or (not single and not married and other)
+    )
+    if not one_choice:
+        raise DomainError(
+            "Recuerde: Debe seleccionar un solo valor sobre su Situación Familiar. "
+            "(Soltero, Casado, etc). La primera seccion del formulario."
+        )
+    if not single and married and not other and not spouse:
+        raise DomainError(
+            "ERROR: Situación Familiar. Si valida que se encuentra casado/a "
+            "ha de introducir el NIF de su conyuge OBLIGATORIAMENTE."
+        )
+    if not single and not married and not other and spouse:
+        raise DomainError(
+            "ERROR: Situación Familiar. Ha introducido el CIF del conyuje sin validar el estado Casado/a."
+        )
+    accepted = (
+        (single and not married and not other and not spouse)
+        or (not single and married and not other and spouse)
+        or (not single and not married and other and not spouse)
+    )
+    if not accepted:
+        raise DomainError(
+            "ERROR: Situación Familiar. Si introduce el NIF del conyuje valide el estado Casado/a."
+        )
+    if spouse:
+        message = _spouse_id_message(spouse)
+        if message:
+            raise DomainError(message)
+
+
+def _validate_disability(payload: TaxDataUpdate) -> None:
+    recognized = payload.disability_recognized
+    from_33 = payload.own_disability_33
+    from_65 = payload.own_disability_65
+    needs_help = payload.own_disability_help
+    if not recognized and not from_33 and not from_65 and not needs_help:
+        return
+    if (recognized and not from_33 and not from_65) or (not recognized and from_33 and not from_65) or (
+        not recognized and not from_33 and from_65
+    ):
+        return
+    if not recognized and not from_33 and not from_65 and needs_help:
+        raise DomainError(
+            'ERROR Sección: Discapacidad. Ademas de validar que le cuidan terceros, debe de selecionar '
+            'uno de los tres estados: "reconocido",  "de 33% a 65%" o  "superior a 65%"'
+        )
+    raise DomainError(
+        'ERROR Sección: Discapacidad. Solo puede validar uno de los tres estados: '
+        '"reconocido",  "de 33% a 65%" o  "superior a 65%"'
+    )
 
 
 def _check_past_date(value: str | None, label: str) -> None:
@@ -191,25 +311,18 @@ class CandidateService:
         ensure_editable(candidate)
         if not candidate.personal_data_complete or not candidate.documents_complete:
             raise DomainError("Completa los datos personales y los documentos antes de los datos fiscales.")
-        children = _clean_children(payload.children)
-        ascendants = _clean_ascendants(payload.ascendants)
-        if payload.family_single_with_children and not children:
-            raise DomainError("La situación familiar 1 exige al menos un descendiente.")
+        children = _validate_children(payload.children, payload.family_single_with_children)
+        ascendants = _validate_ascendants(payload.ascendants)
         spouse = normalize_national_id(payload.spouse_national_id or "")
-        if payload.family_spouse_low_income:
-            if not is_valid_national_id(spouse):
-                raise DomainError("Indica un DNI/NIE válido del cónyuge.")
-        else:
-            spouse = spouse or None
-            if spouse and not is_valid_national_id(spouse):
-                raise DomainError("El DNI/NIE del cónyuge no es válido.")
+        _validate_family(payload, spouse)
+        _validate_disability(payload)
+        if not payload.family_spouse_low_income:
+            spouse = spouse or ""
         move = (payload.geographic_move_date or "").strip() or None
         if move and parse_iso_date(move) is None:
-            raise DomainError("La fecha de traslado no es válida.")
+            raise DomainError("Fecha erronea YYYY/mm/dd")
         if not is_amount(payload.compensatory_pension) or not is_amount(payload.child_support):
-            raise DomainError("Los importes deben ser numéricos. Puedes usar una coma decimal.")
-        if payload.own_disability_33 and payload.own_disability_65:
-            raise DomainError("No puedes marcar los dos grados de discapacidad a la vez.")
+            raise DomainError("Solo numeros seprados por comas para los decimales. Sin puntuacion de miles")
 
         candidate.family_single_with_children = payload.family_single_with_children
         candidate.family_spouse_low_income = payload.family_spouse_low_income

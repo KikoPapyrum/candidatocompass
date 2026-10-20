@@ -1,6 +1,6 @@
 import { createTheme } from '@mui/material/styles'
 
-const ink = '#1a1a1a'
+const ink = '#222C36'
 const compassRed = '#e31837'
 
 export const theme = createTheme({
@@ -14,13 +14,13 @@ export const theme = createTheme({
   typography: {
     fontFamily: '"Source Sans 3", "Helvetica", "Arial", sans-serif',
     h4: { fontWeight: 700, letterSpacing: '-0.02em' },
-    h5: { fontWeight: 700, letterSpacing: '-0.02em' },
+    h5: { fontWeight: 700, letterSpacing: '-0.02em', color: '#222C36' },
     h6: { fontWeight: 700 },
     button: { letterSpacing: '0.01em' },
   },
   components: {
     MuiAppBar: {
-      styleOverrides: { root: { backgroundColor: '#111111' } },
+      styleOverrides: { root: { backgroundColor: '#222C36' } },
     },
     MuiButton: {
       styleOverrides: { root: { textTransform: 'none', fontWeight: 700, borderRadius: 2 } },
@@ -31,9 +31,11 @@ export const theme = createTheme({
     MuiStepIcon: {
       styleOverrides: {
         root: {
-          '&.Mui-active': { color: compassRed },
-          '&.Mui-completed': { color: ink },
+          color: '#d4bc7d',
+          '&.Mui-active': { color: '#d4bc7d' },
+          '&.Mui-completed': { color: '#d4bc7d' },
         },
+        text: { fill: '#ffffff', fontWeight: 700 },
       },
     },
   },

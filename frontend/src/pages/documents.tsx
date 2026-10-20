@@ -24,7 +24,7 @@ export function DocumentsPage() {
     loadDocuments().catch((err: Error) => setError(err.message))
   }, [loadDocuments])
 
-  async function upload(documentType: string, file: File | undefined) {
+  async function upload(documentType: string, label: string, file: File | undefined) {
     if (!file) {
       return
     }
@@ -37,7 +37,7 @@ export function DocumentsPage() {
       await axiosInstance.post('/candidates/me/documents', body, {
         headers: { 'Content-Type': 'multipart/form-data' },
       })
-      setMessage(`${file.name} subido.`)
+      setMessage(`${label}: ${file.name}`)
       await loadDocuments()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'No se ha podido subir el documento.')
@@ -62,22 +62,30 @@ export function DocumentsPage() {
       {error && <Alert severity="error">{error}</Alert>}
       {message && <Alert severity="success">{message}</Alert>}
       {documents.length === 0 && <Alert severity="warning">No hay documentos solicitados.</Alert>}
+      {documents.length > 0 && documents.every((document) => document.uploaded) && (
+        <Alert severity="success">Cada casilla tiene su archivo. Ya puedes abrir el formulario 145.</Alert>
+      )}
       {documents.map((document) => (
-        <Card key={document.document_type} variant="outlined">
+        <Card
+          key={document.document_type}
+          variant="outlined"
+          sx={{ borderColor: document.uploaded ? 'success.main' : 'divider', borderWidth: document.uploaded ? 2 : 1 }}
+        >
           <CardContent>
             <Typography variant="h6">{document.label}</Typography>
             <Typography color={document.uploaded ? 'success.main' : 'text.secondary'} sx={{ mb: 1 }}>
-              {document.uploaded ? `Subido: ${document.original_filename}` : 'Sin subir'}
+              {document.uploaded ? `Archivo de esta casilla: ${document.original_filename}` : 'Esta casilla está vacía'}
             </Typography>
             <Button variant="outlined" component="label">
-              Subir documento
+              {document.uploaded ? 'Sustituir archivo' : 'Adjuntar en esta casilla'}
               <input
                 hidden
                 type="file"
                 accept="image/jpeg,image/png,application/pdf"
                 onChange={(event) => {
-                  upload(document.document_type, event.target.files?.[0])
+                  const file = event.target.files?.[0]
                   event.target.value = ''
+                  upload(document.document_type, document.label, file)
                 }}
               />
             </Button>
@@ -85,7 +93,7 @@ export function DocumentsPage() {
         </Card>
       ))}
       <Button variant="text" onClick={() => navigate('/datos')}>Volver a datos</Button>
-      <Button variant="contained" size="large" onClick={continueToTax}>Guardar documentos e ir a datos fiscales</Button>
+      <Button variant="contained" size="large" onClick={continueToTax}>Continuar al formulario 145</Button>
     </Stack>
   )
 }

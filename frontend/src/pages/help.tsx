@@ -12,7 +12,7 @@ export function HelpPage() {
   return (
     <Stack sx={{ minHeight: '100dvh', bgcolor: 'background.default', alignItems: 'center' }}>
       <Stack sx={{ width: '100%', maxWidth: 480, bgcolor: 'background.paper', minHeight: '100dvh' }} spacing={2}>
-        <Box sx={{ bgcolor: '#111111', px: 3, py: 2 }}>
+        <Box sx={{ bgcolor: '#222C36', px: 3, py: 2 }}>
           <CompassMark height={44} />
         </Box>
         <Stack spacing={2} sx={{ px: 3, pb: 3 }}>

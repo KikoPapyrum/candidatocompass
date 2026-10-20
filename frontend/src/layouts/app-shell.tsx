@@ -93,7 +93,7 @@ export function AppShell() {
         </Box>
         <Drawer open={open} onClose={() => setOpen(false)}>
           <Box sx={{ width: 280 }} role="presentation">
-            <Box sx={{ bgcolor: '#111111', px: 2, py: 2 }}>
+            <Box sx={{ bgcolor: '#222C36', px: 2, py: 2 }}>
               <CompassMark height={44} />
             </Box>
             <Box sx={{ px: 2, pt: 2 }}>
