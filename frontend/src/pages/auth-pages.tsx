@@ -1,6 +1,9 @@
+import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown'
+import LockOutlinedIcon from '@mui/icons-material/LockOutlined'
 import Alert from '@mui/material/Alert'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
+import InputAdornment from '@mui/material/InputAdornment'
 import Stack from '@mui/material/Stack'
 import TextField, { type TextFieldProps } from '@mui/material/TextField'
 import Typography from '@mui/material/Typography'
@@ -16,6 +19,32 @@ import { isValidNationalId, isValidPassword } from '../utils/validators'
 const GOLD = '#d4bc7d'
 const INK = '#222C36'
 const CARD = '#9aa4b0'
+const LINK = { color: '#9a8450', fontWeight: 700, textDecoration: 'none' } as const
+export const lightCard = { bgcolor: '#fff', borderRadius: '22px', boxShadow: '0 12px 32px rgba(34, 44, 54, 0.06)', px: 2.5, py: 3 }
+export const pillButton = {
+  borderRadius: 999,
+  py: 1.25,
+  letterSpacing: '0.12em',
+  backgroundImage: 'none',
+  bgcolor: INK,
+  boxShadow: 'none',
+  '&:hover': { bgcolor: '#1b2630', backgroundImage: 'none', boxShadow: 'none' },
+}
+
+export function AuthCanvas({ subtitle, children }: { subtitle: string; children: ReactNode }) {
+  return (
+    <Box sx={{ position: 'fixed', inset: 0, overflow: 'auto', bgcolor: '#eef1f4', display: 'flex', justifyContent: 'center' }}>
+      <Box sx={{ width: '100%', maxWidth: 440, px: 2.5, pt: 5, pb: 4 }}>
+        <Stack spacing={1.25} sx={{ alignItems: 'center', mb: 3 }}>
+          <CompassMark height={58} ink />
+          <Typography variant="h4" sx={{ fontWeight: 700, color: INK, textAlign: 'center', mt: 1 }}>Ready to Work</Typography>
+          <Typography sx={{ color: '#8b93a0', textAlign: 'center', mt: -0.5 }}>{subtitle}</Typography>
+        </Stack>
+        {children}
+      </Box>
+    </Box>
+  )
+}
 
 const relief = {
   position: 'absolute',
@@ -104,13 +133,14 @@ export function AuthFrame({ title, children }: { title: string; children: ReactN
   )
 }
 
-function LabeledField({ label, type, slotProps, ...props }: TextFieldProps & { label: string }) {
+function LabeledField({ label, type, slotProps, tone = 'onDark', startIcon, ...props }: TextFieldProps & { label: string; tone?: 'onDark' | 'onLight'; startIcon?: ReactNode }) {
   const id = useId()
   const [shown, setShown] = useState(false)
   const password = type === 'password'
+  const onLight = tone === 'onLight'
   return (
     <Box>
-      <Typography component="label" htmlFor={id} sx={{ display: 'block', color: '#fff', fontWeight: 600, mb: 0.75, fontSize: 14 }}>
+      <Typography component="label" htmlFor={id} sx={{ display: 'block', color: onLight ? INK : '#fff', fontWeight: 700, mb: 0.75, fontSize: 13 }}>
         {label}
       </Typography>
       <TextField
@@ -118,11 +148,21 @@ function LabeledField({ label, type, slotProps, ...props }: TextFieldProps & { l
         fullWidth
         hiddenLabel
         type={password && shown ? 'text' : type}
+        sx={onLight ? {
+          '& .MuiOutlinedInput-root': {
+            bgcolor: '#f4f6f8',
+            borderRadius: '10px',
+            '& fieldset': { borderColor: 'transparent' },
+            '&:hover fieldset': { borderColor: '#e4e7ec' },
+            '&.Mui-focused fieldset': { borderColor: INK },
+          },
+        } : undefined}
         slotProps={{
           ...slotProps,
           input: {
             ...(typeof slotProps?.input === 'object' ? slotProps.input : {}),
-            ...(password ? { endAdornment: <PasswordAdornment shown={shown} onToggle={() => setShown((value) => !value)} color={INK} /> } : {}),
+            ...(startIcon ? { startAdornment: <InputAdornment position="start">{startIcon}</InputAdornment> } : {}),
+            ...(password ? { endAdornment: <PasswordAdornment shown={shown} onToggle={() => setShown((value) => !value)} color={onLight ? '#8b93a0' : INK} /> } : {}),
           },
         }}
         {...props}
@@ -179,33 +219,59 @@ export function SignInPage() {
   }
 
   return (
-    <AuthFrame title="">
-      <Shake tick={tick}>
-      <Stack component="form" spacing={2} onSubmit={onSubmit}>
-        {error && <Alert severity="error">{error}</Alert>}
-        <LabeledField
-          label="DNI/NIE *"
-          name="username"
-          autoComplete="username"
-          value={nationalId}
-          onChange={(event) => onNationalIdChange(event.target.value)}
-        />
-        <LabeledField
-          label="Contraseña *"
-          name="password"
-          type="password"
-          autoComplete="current-password"
-          value={password}
-          onChange={(event) => setPassword(event.target.value)}
-        />
-        <Button type="submit" variant="contained" size="large" disabled={busy}>Accede</Button>
-        <Button component={RouterLink} to="/auth/registro">Regístrate</Button>
-        <Button component={RouterLink} to="/auth/verificar">Valida tu código de registro</Button>
-        <Button component={RouterLink} to="/auth/recuperar">Olvidaste tus credenciales</Button>
-        <Button component={RouterLink} to="/ayuda">Ayuda</Button>
-      </Stack>
-      </Shake>
-    </AuthFrame>
+    <AuthCanvas subtitle={"\u00a0"}>
+        <Shake tick={tick}>
+          <Stack component="form" spacing={1.75} onSubmit={onSubmit} sx={lightCard}>
+            {error && <Alert severity="error">{error}</Alert>}
+            <LabeledField
+              tone="onLight"
+              label="DNI / NIE *"
+              name="username"
+              autoComplete="username"
+              value={nationalId}
+              onChange={(event) => onNationalIdChange(event.target.value)}
+            />
+            <LabeledField
+              tone="onLight"
+              label="Contraseña *"
+              name="password"
+              type="password"
+              autoComplete="current-password"
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+              startIcon={<LockOutlinedIcon sx={{ fontSize: 18, color: '#9aa3ad' }} />}
+            />
+            <Button component={RouterLink} to="/auth/recuperar" sx={{ alignSelf: 'center', color: '#9a8450', fontWeight: 600, fontSize: 14, minWidth: 0, py: 0 }}>
+              ¿Olvidaste tus credenciales?
+            </Button>
+            <Button type="submit" variant="contained" size="large" fullWidth disabled={busy} sx={pillButton}>
+              ACCEDER
+            </Button>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, py: 0.5 }}>
+              <Box sx={{ flex: 1, height: '1px', bgcolor: '#e6e9ee' }} />
+              <Box sx={{ width: 28, height: 28, borderRadius: '50%', border: '1px solid #e6e9ee', color: '#9aa3ad', display: 'grid', placeItems: 'center' }}>
+                <KeyboardArrowDownIcon sx={{ fontSize: 18 }} />
+              </Box>
+              <Box sx={{ flex: 1, height: '1px', bgcolor: '#e6e9ee' }} />
+            </Box>
+            <Typography sx={{ textAlign: 'center', color: '#5c6570', fontSize: 14.5 }}>
+              ¿No tienes cuenta? <Box component={RouterLink} to="/auth/registro" sx={LINK}>Regístrate</Box>
+            </Typography>
+            <Button
+              component={RouterLink}
+              to="/auth/verificar"
+              variant="outlined"
+              fullWidth
+              sx={{ borderRadius: 999, py: 1.1, color: '#5c6570', borderColor: '#e4e7ec', fontWeight: 600, '&:hover': { borderColor: '#cfd5dd', bgcolor: '#fafbfc' } }}
+            >
+              Valida tu código de registro
+            </Button>
+            <Button component={RouterLink} to="/ayuda" sx={{ alignSelf: 'center', color: '#8b93a0', fontWeight: 600, minWidth: 0 }}>
+              Ayuda
+            </Button>
+          </Stack>
+        </Shake>
+    </AuthCanvas>
   )
 }
 
@@ -244,50 +310,64 @@ export function SignUpPage() {
     }
   }
 
+  const loginPath = nationalId ? `/auth?national_id=${encodeURIComponent(nationalId)}` : '/auth'
+
   return (
-    <AuthFrame title="Regístrate">
+    <AuthCanvas subtitle={"\u00a0"}>
       <Shake tick={tick}>
-      <Stack component="form" spacing={2} onSubmit={onSubmit}>
-        <Alert severity="info">Al registrarte te enviaremos un código de 6 dígitos a tu email para confirmar la cuenta.</Alert>
-        {error && <Alert severity="error">{error}</Alert>}
-        <LabeledField
-          label="DNI/NIE *"
-          name="username"
-          autoComplete="username"
-          value={nationalId}
-          onChange={(event) => onNationalIdChange(event.target.value)}
-        />
-        <LabeledField
-          label="Contraseña *"
-          name="new-password"
-          type="password"
-          autoComplete="new-password"
-          value={password}
-          onChange={(event) => setPassword(event.target.value)}
-        />
-        <LabeledField
-          label="Email *"
-          name="email"
-          type="text"
-          autoComplete="off"
-          slotProps={{ htmlInput: { inputMode: 'email' } }}
-          value={email}
-          onChange={(event) => setEmail(event.target.value)}
-        />
-        <LabeledField
-          label="Repite el email *"
-          name="email-repeat"
-          type="text"
-          autoComplete="off"
-          slotProps={{ htmlInput: { inputMode: 'email' } }}
-          value={emailRepeat}
-          onChange={(event) => setEmailRepeat(event.target.value)}
-        />
-        <Button type="submit" variant="contained" size="large" disabled={busy}>Regístrate</Button>
-        <Button component={RouterLink} to={nationalId ? `/auth?national_id=${encodeURIComponent(nationalId)}` : '/auth'}>Accede</Button>
-      </Stack>
+        <Stack component="form" spacing={1.75} onSubmit={onSubmit} sx={lightCard}>
+          <Alert severity="info">Al registrarte te enviaremos un código de 6 dígitos a tu email para confirmar la cuenta.</Alert>
+          {error && <Alert severity="error">{error}</Alert>}
+          <LabeledField
+            tone="onLight"
+            label="DNI / NIE *"
+            name="username"
+            autoComplete="username"
+            value={nationalId}
+            onChange={(event) => onNationalIdChange(event.target.value)}
+          />
+          <LabeledField
+            tone="onLight"
+            label="Contraseña *"
+            name="new-password"
+            type="password"
+            autoComplete="new-password"
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
+            startIcon={<LockOutlinedIcon sx={{ fontSize: 18, color: '#9aa3ad' }} />}
+          />
+          <LabeledField
+            tone="onLight"
+            label="Email *"
+            name="email"
+            type="text"
+            autoComplete="off"
+            slotProps={{ htmlInput: { inputMode: 'email' } }}
+            value={email}
+            onChange={(event) => setEmail(event.target.value)}
+          />
+          <LabeledField
+            tone="onLight"
+            label="Repite el email *"
+            name="email-repeat"
+            type="text"
+            autoComplete="off"
+            slotProps={{ htmlInput: { inputMode: 'email' } }}
+            value={emailRepeat}
+            onChange={(event) => setEmailRepeat(event.target.value)}
+          />
+          <Button type="submit" variant="contained" size="large" fullWidth disabled={busy} sx={pillButton}>
+            REGÍSTRATE
+          </Button>
+          <Typography sx={{ textAlign: 'center', color: '#5c6570', fontSize: 14.5 }}>
+            ¿Ya tienes cuenta? <Box component={RouterLink} to={loginPath} sx={LINK}>Accede</Box>
+          </Typography>
+          <Button component={RouterLink} to="/ayuda" sx={{ alignSelf: 'center', color: '#8b93a0', fontWeight: 600, minWidth: 0 }}>
+            Ayuda
+          </Button>
+        </Stack>
       </Shake>
-    </AuthFrame>
+    </AuthCanvas>
   )
 }
 
@@ -314,24 +394,38 @@ export function VerifyPage() {
   }
 
   return (
-    <AuthFrame title="Valida tu código">
+    <AuthCanvas subtitle={"\u00a0"}>
       <Shake tick={tick}>
-      <Stack component="form" spacing={2} onSubmit={onSubmit}>
-        <Alert severity="info">Introduce el código de 6 dígitos que te hemos enviado por email.</Alert>
-        {error && <Alert severity="error">{error}</Alert>}
-        <LabeledField
-          label="DNI/NIE *"
-          name="username"
-          autoComplete="username"
-          value={nationalId}
-          onChange={(event) => onNationalIdChange(event.target.value)}
-        />
-        <LabeledField label="Código de verificación *" value={code} onChange={(event) => setCode(event.target.value)} inputProps={{ maxLength: 6 }} />
-        <Button type="submit" variant="contained" size="large" disabled={busy}>Confirma el código</Button>
-        <Button component={RouterLink} to="/auth">Accede</Button>
-      </Stack>
+        <Stack component="form" spacing={1.75} onSubmit={onSubmit} sx={lightCard}>
+          <Alert severity="info">Introduce el código de 6 dígitos que te hemos enviado por email.</Alert>
+          {error && <Alert severity="error">{error}</Alert>}
+          <LabeledField
+            tone="onLight"
+            label="DNI / NIE *"
+            name="username"
+            autoComplete="username"
+            value={nationalId}
+            onChange={(event) => onNationalIdChange(event.target.value)}
+          />
+          <LabeledField
+            tone="onLight"
+            label="Código de verificación *"
+            value={code}
+            onChange={(event) => setCode(event.target.value)}
+            slotProps={{ htmlInput: { maxLength: 6, inputMode: 'numeric' } }}
+          />
+          <Button type="submit" variant="contained" size="large" fullWidth disabled={busy} sx={pillButton}>
+            CONFIRMA EL CÓDIGO
+          </Button>
+          <Typography sx={{ textAlign: 'center', color: '#5c6570', fontSize: 14.5 }}>
+            <Box component={RouterLink} to="/auth" sx={LINK}>Accede</Box>
+          </Typography>
+          <Button component={RouterLink} to="/ayuda" sx={{ alignSelf: 'center', color: '#8b93a0', fontWeight: 600, minWidth: 0 }}>
+            Ayuda
+          </Button>
+        </Stack>
       </Shake>
-    </AuthFrame>
+    </AuthCanvas>
   )
 }
 

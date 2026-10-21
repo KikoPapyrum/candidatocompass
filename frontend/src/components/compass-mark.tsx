@@ -1,6 +1,6 @@
 import Box from '@mui/material/Box'
 
-export function CompassMark({ height = 40, blend = false }: { height?: number; blend?: boolean }) {
+export function CompassMark({ height = 40, blend = false, ink = false }: { height?: number; blend?: boolean; ink?: boolean }) {
   return (
     <Box
       component="img"
@@ -11,6 +11,7 @@ export function CompassMark({ height = 40, blend = false }: { height?: number; b
         width: 'auto',
         display: 'block',
         mixBlendMode: blend ? 'screen' : 'normal',
+        filter: ink ? 'brightness(0)' : undefined,
       }}
     />
   )

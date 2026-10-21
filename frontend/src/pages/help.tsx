@@ -1,16 +1,15 @@
-import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
 import Stack from '@mui/material/Stack'
 import Typography from '@mui/material/Typography'
 import { Link as RouterLink } from 'react-router'
 
 import { useAuthStore } from '../auth/auth-store'
-import { CompassMark } from '../components/compass-mark'
+import { AuthCanvas, lightCard, pillButton } from './auth-pages'
 
 function HelpBody({ signedIn }: { signedIn: boolean }) {
   return (
     <Stack spacing={2}>
-      <Typography variant="h5">Bienvenido a Ready to Work</Typography>
+      {signedIn && <Typography variant="h5">Bienvenido a Ready to Work</Typography>}
       <Typography>
         Desde esta aplicación te registras como candidato. Te pediremos tus datos personales y los documentos necesarios para la contratación.
         Si tienes alguna dificultad, escribe a documentacion.bilbao@compass-group.es.
@@ -25,7 +24,7 @@ function HelpBody({ signedIn }: { signedIn: boolean }) {
       <Typography>4. Legal: acepta privacidad, uso del email y veracidad de los datos.</Typography>
       <Typography>Cuando termines, el personal de Compass revisará la información. Si hay que corregir algo, te lo indicarán y podrás volver a entrar.</Typography>
       {!signedIn && (
-        <Button component={RouterLink} to="/auth" variant="contained">Ir al acceso</Button>
+        <Button component={RouterLink} to="/auth" variant="contained" size="large" fullWidth sx={pillButton}>Ir al acceso</Button>
       )}
     </Stack>
   )
@@ -37,15 +36,10 @@ export function HelpPage() {
     return <HelpBody signedIn />
   }
   return (
-    <Stack sx={{ minHeight: '100dvh', bgcolor: 'background.default', alignItems: 'center' }}>
-      <Stack sx={{ width: '100%', maxWidth: 480, bgcolor: 'background.paper', minHeight: '100dvh' }} spacing={2}>
-        <Box sx={{ bgcolor: '#222C36', px: 3, py: 2 }}>
-          <CompassMark height={44} />
-        </Box>
-        <Stack spacing={2} sx={{ px: 3, pb: 3 }}>
-          <HelpBody signedIn={false} />
-        </Stack>
+    <AuthCanvas subtitle={"\u00a0"}>
+      <Stack spacing={2} sx={lightCard}>
+        <HelpBody signedIn={false} />
       </Stack>
-    </Stack>
+    </AuthCanvas>
   )
 }
