@@ -1,14 +1,15 @@
 import Alert from '@mui/material/Alert'
+import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
 import Stack from '@mui/material/Stack'
 import TextField from '@mui/material/TextField'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { useForm } from 'react-hook-form'
 import { useNavigate } from 'react-router'
 import { z } from 'zod'
 
-import { Shake, StepFeedback, useNotedError } from '../components/motion'
+import { Shake, StepFeedback, useNotedError, useScreenError } from '../components/motion'
 import { OptionField } from '../components/option-field'
 import { axiosInstance } from '../lib/axios'
 import { useCandidateStore } from '../store/candidate-store'
@@ -44,6 +45,31 @@ const schema = z.object({
 })
 
 type FormValues = z.infer<typeof schema>
+
+function FieldGroup({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <Box
+      component="fieldset"
+      sx={{
+        m: 0,
+        width: '100%',
+        minInlineSize: 0,
+        px: 2,
+        pt: 1,
+        pb: 2.25,
+        border: '1px solid #e6e9ee',
+        borderRadius: '12px',
+        bgcolor: '#fff',
+        boxShadow: '0 10px 28px rgba(28, 39, 49, 0.06)',
+      }}
+    >
+      <Box component="legend" sx={{ px: 0.75, fontWeight: 700, fontSize: 15, color: '#222C36' }}>
+        {label}
+      </Box>
+      <Stack spacing={2}>{children}</Stack>
+    </Box>
+  )
+}
 
 function text(value: string | null | undefined) {
   return value ?? ''
@@ -85,6 +111,7 @@ export function PersonalDataPage() {
   const catalogs = useCandidateStore((state) => state.catalogs)!
   const setCandidate = useCandidateStore((state) => state.setCandidate)
   const { error, setError, tick } = useNotedError()
+  useScreenError(error)
   const [saved, setSaved] = useState(false)
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -129,6 +156,7 @@ export function PersonalDataPage() {
     <Stack component="form" spacing={2} onSubmit={form.handleSubmit(onSubmit, () => setError('Revisa los campos obligatorios.'))}>
       {candidate.rejection_reason && <Alert severity="warning">{candidate.rejection_reason}</Alert>}
       {error && <Alert severity="error">{error}</Alert>}
+      <FieldGroup label="Datos personales">
       <TextField label="DNI/NIE" value={candidate.national_id} disabled />
       <TextField label="Nombre *" {...form.register('first_name')} error={Boolean(form.formState.errors.first_name)} helperText={form.formState.errors.first_name?.message} />
       <TextField label="Primer apellido *" {...form.register('last_name')} error={Boolean(form.formState.errors.last_name)} helperText={form.formState.errors.last_name?.message} />
@@ -140,6 +168,14 @@ export function PersonalDataPage() {
       <TextField label="Teléfono móvil *" {...form.register('phone')} error={Boolean(form.formState.errors.phone)} helperText={form.formState.errors.phone?.message ?? '9 dígitos'} />
       <TextField label="Email *" {...form.register('email')} error={Boolean(form.formState.errors.email)} helperText={form.formState.errors.email?.message} />
       <OptionField name="civil_status" control={form.control} label="Estado civil *" options={catalogs.civilStatuses} />
+      <TextField label="IBAN *" {...form.register('iban')} error={Boolean(form.formState.errors.iban)} helperText={form.formState.errors.iban?.message ?? '24 caracteres, sin espacios'} />
+      <TextField label="Nº afiliación Seguridad Social *" {...form.register('social_security_number')} error={Boolean(form.formState.errors.social_security_number)} helperText="12 dígitos" />
+      {showPermit && (
+        <TextField label="Fecha fin permiso de trabajo UE" type="date" InputLabelProps={{ shrink: true }} {...form.register('work_permit_end')} />
+      )}
+      <OptionField name="unemployed" control={form.control} label="Desempleado *" options={catalogs.yesNo} />
+      </FieldGroup>
+      <FieldGroup label="Dirección">
       <OptionField name="street_type" control={form.control} label="Tipo de vía *" options={catalogs.streetTypes} />
       <TextField label="Dirección *" {...form.register('street')} error={Boolean(form.formState.errors.street)} helperText={form.formState.errors.street?.message} />
       <TextField label="Nº / bloque" {...form.register('street_number')} />
@@ -154,12 +190,8 @@ export function PersonalDataPage() {
         search
       />
       <OptionField name="province" control={form.control} label="Provincia *" options={provinces} search disabled={provinces.length === 0} />
-      <TextField label="IBAN *" {...form.register('iban')} error={Boolean(form.formState.errors.iban)} helperText={form.formState.errors.iban?.message ?? '24 caracteres, sin espacios'} />
-      <TextField label="Nº afiliación Seguridad Social *" {...form.register('social_security_number')} error={Boolean(form.formState.errors.social_security_number)} helperText="12 dígitos" />
-      {showPermit && (
-        <TextField label="Fecha fin permiso de trabajo UE" type="date" InputLabelProps={{ shrink: true }} {...form.register('work_permit_end')} />
-      )}
-      <OptionField name="unemployed" control={form.control} label="Desempleado *" options={catalogs.yesNo} />
+      </FieldGroup>
+      <FieldGroup label="Minusvalía">
       <OptionField name="disability" control={form.control} label="Minusvalía *" options={catalogs.yesNo} />
       {disability === 'SI' && (
         <>
@@ -167,8 +199,9 @@ export function PersonalDataPage() {
           <TextField label="Porcentaje *" {...form.register('disability_percent')} helperText="De 0 a 100" />
         </>
       )}
+      </FieldGroup>
       <Button type="submit" variant="contained" size="large" disabled={form.formState.isSubmitting || saved}>
-        Guardar y subir documentos
+        Continuar a documentos
       </Button>
     </Stack>
     {saved && <StepFeedback title="Datos guardados" onDone={() => navigate('/documentos')} />}

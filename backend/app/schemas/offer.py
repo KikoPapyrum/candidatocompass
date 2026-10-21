@@ -1,6 +1,6 @@
 """Public offer and inscription bodies."""
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 
 class EnrollRequest(BaseModel):
@@ -10,4 +10,3 @@ class EnrollRequest(BaseModel):
     second_last_name: str | None = None
     email: str
     phone: str
-    password: str = Field(min_length=8)

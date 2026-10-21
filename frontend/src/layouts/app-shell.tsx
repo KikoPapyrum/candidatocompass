@@ -39,7 +39,7 @@ function nextStep(candidate: { personal_data_complete: boolean; documents_comple
   if (!candidate.tax_data_complete) {
     return { label: 'Siguiente: datos fiscales', path: '/fiscal', ready: false }
   }
-  return { label: 'Ya puedes enviar a Kulteo', path: '/legal', ready: true }
+  return { label: 'Ya puedes actualizar candidatura', path: '/legal', ready: true }
 }
 
 export function AppShell() {
@@ -50,6 +50,7 @@ export function AppShell() {
   const candidate = useCandidateStore((state) => state.candidate)
   const loading = useCandidateStore((state) => state.loading)
   const load = useCandidateStore((state) => state.load)
+  const screenError = useCandidateStore((state) => state.screenError)
 
   useEffect(() => {
     if (token) {
@@ -79,7 +80,7 @@ export function AppShell() {
   const showNav = wizard.includes(location.pathname) || location.pathname === '/ayuda'
   const canSubmit = candidate.personal_data_complete && candidate.documents_complete && candidate.tax_data_complete
   const upcoming = nextStep(candidate)
-  const showGuide = wizard.includes(location.pathname)
+  const showGuide = wizard.includes(location.pathname) && !(screenError && upcoming.ready)
   if (location.pathname === '/legal' && !canSubmit) {
     return <Navigate to="/datos" replace />
   }

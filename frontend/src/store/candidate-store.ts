@@ -8,6 +8,8 @@ type CandidateState = {
   documents: DocumentStatus[]
   catalogs: Catalogs | null
   loading: boolean
+  screenError: string
+  setScreenError: (message: string) => void
   load: () => Promise<void>
   setCandidate: (candidate: Candidate) => void
   loadDocuments: () => Promise<void>
@@ -18,6 +20,8 @@ export const useCandidateStore = create<CandidateState>((set) => ({
   documents: [],
   catalogs: null,
   loading: false,
+  screenError: '',
+  setScreenError: (message) => set({ screenError: message }),
   load: async () => {
     set({ loading: true })
     const [candidate, catalogs] = await Promise.all([

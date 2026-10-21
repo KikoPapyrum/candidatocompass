@@ -277,10 +277,12 @@ export function SignInPage() {
 
 export function SignUpPage() {
   const navigate = useNavigate()
+  const [params] = useSearchParams()
   const { error, setError, tick } = useNotedError()
-  const { nationalId, onNationalIdChange } = useNationalId()
-  const [email, setEmail] = useState('')
-  const [emailRepeat, setEmailRepeat] = useState('')
+  const { nationalId, onNationalIdChange } = useNationalId(params.get('national_id') ?? '')
+  const initialEmail = params.get('email') ?? ''
+  const [email, setEmail] = useState(initialEmail)
+  const [emailRepeat, setEmailRepeat] = useState(initialEmail)
   const [password, setPassword] = useState('')
   const [busy, setBusy] = useState(false)
 

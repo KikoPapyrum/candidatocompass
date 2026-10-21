@@ -9,11 +9,10 @@ from app.models.candidate import Candidate
 from app.models.offer import JobOffer
 from app.models.user import User
 from app.schemas.offer import EnrollRequest
-from app.services.auth_service import AuthService
 from app.services.inbound_service import OPEN_STEP
 from app.services.offer_sync import merge_required_documents, sync_offers
 from app.utils.exceptions import DomainError
-from app.utils.validators import is_valid_mobile, normalize_national_id
+from app.utils.validators import is_valid_email, is_valid_mobile, is_valid_national_id, normalize_national_id
 
 
 async def load_offer(code: str) -> JobOffer:
@@ -29,13 +28,15 @@ async def load_offer(code: str) -> JobOffer:
 
 
 class EnrollmentService:
-    """Create the local application and finish the account registration."""
+    """Store the local application. The password is chosen later in the app."""
 
     @staticmethod
-    async def enroll(offer: JobOffer, payload: EnrollRequest) -> tuple[str, str | None, User]:
+    async def enroll(offer: JobOffer, payload: EnrollRequest) -> str:
         if not offer.open:
             raise DomainError("Esta oferta ya no admite inscripciones.")
         national_id = normalize_national_id(payload.national_id)
+        if not is_valid_national_id(national_id):
+            raise DomainError("El DNI/NIE no es correcto.")
         phone = "".join(payload.phone.split())
         if not is_valid_mobile(phone):
             raise DomainError("El móvil debe tener 9 dígitos.")
@@ -43,10 +44,11 @@ class EnrollmentService:
         last_name = payload.last_name.strip()
         if not first_name or not last_name:
             raise DomainError("Indica nombre y apellidos.")
-        second_last_name = (payload.second_last_name or "").strip() or None
         email = payload.email.strip().lower()
-
-        status, token, user = await AuthService.open_account(national_id, email, payload.password)
+        if not is_valid_email(email):
+            raise DomainError("El email no es válido.")
+        second_last_name = (payload.second_last_name or "").strip() or None
+        account = await User.find_one(User.national_id == national_id)
 
         created = False
         application = Application(national_id=national_id, offer_code=offer.code)
@@ -56,25 +58,26 @@ class EnrollmentService:
         except DuplicateKeyError:
             created = False
         candidate = await Candidate.find_one(Candidate.national_id == national_id)
-        if created or candidate is None:
-            if candidate is None:
-                candidate = Candidate(
-                    national_id=national_id,
-                    step=OPEN_STEP,
-                    active_offer_code=offer.code,
-                    required_documents=list(offer.required_documents),
-                )
-            else:
-                candidate.step = OPEN_STEP
-                candidate.active_offer_code = offer.code
-                candidate.required_documents = merge_required_documents(candidate, offer.required_documents)
-                candidate.documents_complete = False
-                candidate.rejection_reason = None
-            candidate.first_name = first_name
-            candidate.last_name = last_name
-            candidate.second_last_name = second_last_name
-            candidate.email = email
-            candidate.phone = phone
-            candidate.updated_at = datetime.utcnow()
-            await candidate.save()
-        return status, token, user
+        if candidate is None:
+            candidate = Candidate(
+                national_id=national_id,
+                step=OPEN_STEP,
+                active_offer_code=offer.code,
+                required_documents=list(offer.required_documents),
+            )
+        elif created:
+            candidate.step = OPEN_STEP
+            candidate.active_offer_code = offer.code
+            candidate.required_documents = merge_required_documents(candidate, offer.required_documents)
+            candidate.documents_complete = False
+            candidate.rejection_reason = None
+        else:
+            candidate.active_offer_code = offer.code
+        candidate.first_name = first_name
+        candidate.last_name = last_name
+        candidate.second_last_name = second_last_name
+        candidate.email = email
+        candidate.phone = phone
+        candidate.updated_at = datetime.utcnow()
+        await candidate.save()
+        return "login" if account is not None else "register"

@@ -7,6 +7,8 @@ import TextField, { type TextFieldProps } from '@mui/material/TextField'
 import Typography from '@mui/material/Typography'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 
+import { useCandidateStore } from '../store/candidate-store'
+
 const shakeFrames = {
   '@keyframes shakeX': {
     '0%, 100%': { transform: 'translateX(0)' },
@@ -30,6 +32,15 @@ export function useNotedError() {
   }
 
   return { error, setError, tick }
+}
+
+export function useScreenError(message: string) {
+  const setScreenError = useCandidateStore((state) => state.setScreenError)
+
+  useEffect(() => {
+    setScreenError(message)
+    return () => setScreenError('')
+  }, [message, setScreenError])
 }
 
 export function Shake({ tick, children }: { tick: number; children: ReactNode }) {

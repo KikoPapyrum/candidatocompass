@@ -12,7 +12,7 @@ import { useState } from 'react'
 import { useFieldArray, useForm } from 'react-hook-form'
 import { useNavigate } from 'react-router'
 
-import { Shake, StepFeedback, useNotedError } from '../components/motion'
+import { Shake, StepFeedback, useNotedError, useScreenError } from '../components/motion'
 import { axiosInstance } from '../lib/axios'
 import { useCandidateStore } from '../store/candidate-store'
 import type { Ascendant, Candidate, Child } from '../types/domain'
@@ -83,6 +83,7 @@ export function TaxPage() {
   const catalogs = useCandidateStore((state) => state.catalogs)!
   const setCandidate = useCandidateStore((state) => state.setCandidate)
   const { error, setError, tick } = useNotedError()
+  useScreenError(error)
   const [saved, setSaved] = useState(false)
   const form = useForm<TaxForm>({
     defaultValues: {
@@ -238,8 +239,7 @@ export function TaxPage() {
       <TextField label="Pensión compensatoria anual" {...form.register('compensatory_pension')} />
       <TextField label="Anualidades por alimentos" {...form.register('child_support')} />
       <FormControlLabel control={<Checkbox {...form.register('housing_deduction')} defaultChecked={candidate.housing_deduction} />} label="Pagos por adquisición o rehabilitación de vivienda habitual anteriores a 2013, con retribuciones inferiores a 33.007,20 euros." />
-      <Button variant="text" onClick={() => navigate('/documentos')}>Volver a documentos</Button>
-      <Button type="submit" variant="contained" size="large" disabled={form.formState.isSubmitting || saved}>Guardar e ir a Legal</Button>
+      <Button type="submit" variant="contained" size="large" disabled={form.formState.isSubmitting || saved}>Continuar a legal</Button>
     </Stack>
     {saved && <StepFeedback title="Datos fiscales guardados" onDone={() => navigate('/legal')} />}
     </Shake>

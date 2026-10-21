@@ -2,21 +2,11 @@
 
 from fastapi import APIRouter, status
 
-from app.models.user import User
-from app.schemas.auth import UserResponse
 from app.schemas.offer import EnrollRequest
 from app.services.document_service import DOCUMENT_LABELS
 from app.services.enrollment_service import EnrollmentService, load_offer
 
 router = APIRouter()
-
-
-def _user_response(user: User) -> UserResponse:
-    return UserResponse(
-        national_id=user.national_id,
-        email=user.email,
-        email_verified=user.email_verified,
-    )
 
 
 @router.get("/{code}")
@@ -37,19 +27,12 @@ async def get_offer(code: str) -> dict:
 
 @router.post("/{code}/enroll", status_code=status.HTTP_201_CREATED)
 async def enroll(code: str, payload: EnrollRequest) -> dict:
-    """Inscribe the candidate locally and open or confirm the account."""
+    """Save the request. The password is created later in the app."""
     offer = await load_offer(code)
-    next_step, token, user = await EnrollmentService.enroll(offer, payload)
-    body = {
-        "status": next_step,
-        "detail": (
-            "Código de verificación generado. Consúltalo en la consola del servidor."
-            if next_step == "verify"
-            else "Inscripción completada."
-        ),
-        "user": _user_response(user).model_dump(),
-    }
-    if token:
-        body["access_token"] = token
-        body["token_type"] = "bearer"
-    return body
+    next_step = await EnrollmentService.enroll(offer, payload)
+    detail = (
+        "Solicitud guardada. Inicia la sesión con tu cuenta."
+        if next_step == "login"
+        else "Solicitud guardada. Regístrate en la aplicación para elegir la contraseña."
+    )
+    return {"status": next_step, "detail": detail}

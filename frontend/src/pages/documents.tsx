@@ -12,7 +12,7 @@ import Typography from '@mui/material/Typography'
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router'
 
-import { Shake, StepFeedback, useNotedError } from '../components/motion'
+import { Shake, StepFeedback, useNotedError, useScreenError } from '../components/motion'
 import { axiosInstance } from '../lib/axios'
 import { useCandidateStore } from '../store/candidate-store'
 import type { Candidate } from '../types/domain'
@@ -129,6 +129,7 @@ export function DocumentsPage() {
   const loadDocuments = useCandidateStore((state) => state.loadDocuments)
   const setCandidate = useCandidateStore((state) => state.setCandidate)
   const { error, setError, tick } = useNotedError()
+  useScreenError(error)
   const [ready, setReady] = useState(false)
   const [message, setMessage] = useState('')
   const [preview, setPreview] = useState<{ documentType: string; label: string; filename: string } | null>(null)

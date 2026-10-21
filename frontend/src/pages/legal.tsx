@@ -7,7 +7,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router'
 
 import { useAuthStore } from '../auth/auth-store'
-import { Shake, StepFeedback, useNotedError } from '../components/motion'
+import { Shake, StepFeedback, useNotedError, useScreenError } from '../components/motion'
 import { axiosInstance } from '../lib/axios'
 
 export function LegalPage() {
@@ -17,6 +17,7 @@ export function LegalPage() {
   const [email, setEmail] = useState(false)
   const [truth, setTruth] = useState(false)
   const { error, setError, tick } = useNotedError()
+  useScreenError(error)
   const [busy, setBusy] = useState(false)
   const [sent, setSent] = useState(false)
 
@@ -48,12 +49,12 @@ export function LegalPage() {
       <FormControlLabel control={<Checkbox checked={email} onChange={(event) => setEmail(event.target.checked)} />} label="Autorizo el uso de mi email personal para recibir comunicaciones corporativas." />
       <FormControlLabel control={<Checkbox checked={truth} onChange={(event) => setTruth(event.target.checked)} />} label="Los datos proporcionados son verídicos." />
       <Button variant="contained" size="large" disabled={busy || sent || !privacy || !email || !truth} onClick={submit}>
-        Enviar a Kulteo
+        Actualizar candidatura
       </Button>
     </Stack>
     {sent && (
       <StepFeedback
-        title="Enviado a Kulteo"
+        title="Candidatura actualizada"
         onDone={() => {
           signOut()
           navigate('/auth', { state: { finished: true } })
