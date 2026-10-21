@@ -12,6 +12,7 @@ import { useState } from 'react'
 import { useFieldArray, useForm } from 'react-hook-form'
 import { useNavigate } from 'react-router'
 
+import { Shake, StepFeedback, useNotedError } from '../components/motion'
 import { axiosInstance } from '../lib/axios'
 import { useCandidateStore } from '../store/candidate-store'
 import type { Ascendant, Candidate, Child } from '../types/domain'
@@ -81,7 +82,8 @@ export function TaxPage() {
   const candidate = useCandidateStore((state) => state.candidate)!
   const catalogs = useCandidateStore((state) => state.catalogs)!
   const setCandidate = useCandidateStore((state) => state.setCandidate)
-  const [error, setError] = useState('')
+  const { error, setError, tick } = useNotedError()
+  const [saved, setSaved] = useState(false)
   const form = useForm<TaxForm>({
     defaultValues: {
       family_situation: familySituation(candidate),
@@ -133,15 +135,15 @@ export function TaxPage() {
         })),
       })
       setCandidate(response.data)
-      navigate('/legal')
+      setSaved(true)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'No se han podido guardar los datos fiscales.')
     }
   }
 
   return (
-    <Stack component="form" spacing={2} onSubmit={form.handleSubmit(onSubmit)}>
-      <Typography variant="h5">{candidate.first_name}, datos para la retención fiscal</Typography>
+    <Shake tick={tick}>
+    <Stack component="form" spacing={2} onSubmit={form.handleSubmit(onSubmit, () => setError('Revisa los campos obligatorios.'))}>
       <Alert severity="info">
         Incluir datos falsos o incompletos en esta comunicación puede ser una infracción tributaria.
       </Alert>
@@ -237,7 +239,9 @@ export function TaxPage() {
       <TextField label="Anualidades por alimentos" {...form.register('child_support')} />
       <FormControlLabel control={<Checkbox {...form.register('housing_deduction')} defaultChecked={candidate.housing_deduction} />} label="Pagos por adquisición o rehabilitación de vivienda habitual anteriores a 2013, con retribuciones inferiores a 33.007,20 euros." />
       <Button variant="text" onClick={() => navigate('/documentos')}>Volver a documentos</Button>
-      <Button type="submit" variant="contained" size="large" disabled={form.formState.isSubmitting}>Guardar datos fiscales e ir a validación legal</Button>
+      <Button type="submit" variant="contained" size="large" disabled={form.formState.isSubmitting || saved}>Guardar e ir a Legal</Button>
     </Stack>
+    {saved && <StepFeedback title="Datos fiscales guardados" onDone={() => navigate('/legal')} />}
+    </Shake>
   )
 }

@@ -65,3 +65,4 @@ class DocumentStatus(BaseModel):
     required: bool
     uploaded: bool
     original_filename: Optional[str] = None
+    uploaded_at: Optional[str] = None

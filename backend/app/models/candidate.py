@@ -65,6 +65,7 @@ class Candidate(Document):
     step: Optional[str] = None
     rejection_reason: Optional[str] = None
     required_documents: list[str] = Field(default_factory=list)
+    active_offer_code: Optional[str] = None
     personal_data_complete: bool = False
     documents_complete: bool = False
     tax_data_complete: bool = False

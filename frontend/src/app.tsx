@@ -10,6 +10,7 @@ import { ForgotPasswordPage, SignInPage, SignUpPage, VerifyPage } from './pages/
 import { DocumentsPage } from './pages/documents'
 import { HelpPage } from './pages/help'
 import { LegalPage } from './pages/legal'
+import { OfferPage } from './pages/offer'
 import { PersonalDataPage } from './pages/personal-data'
 import { TaxPage } from './pages/tax-data'
 import { theme } from './theme'
@@ -38,7 +39,7 @@ export function App() {
     <ThemeProvider theme={theme}>
       <CssBaseline />
       <Routes>
-        <Route path="/ayuda" element={<HelpPage />} />
+        <Route path="/oferta/:code" element={<OfferPage />} />
         <Route path="/auth" element={<GuestOnly><SignInRoute /></GuestOnly>} />
         <Route path="/auth/registro" element={<GuestOnly><SignUpPage /></GuestOnly>} />
         <Route path="/auth/verificar" element={<GuestOnly><VerifyPage /></GuestOnly>} />
@@ -48,6 +49,7 @@ export function App() {
           <Route path="/documentos" element={<DocumentsPage />} />
           <Route path="/fiscal" element={<TaxPage />} />
           <Route path="/legal" element={<LegalPage />} />
+          <Route path="/ayuda" element={<HelpPage />} />
           <Route path="/estado" element={<LockedPage />} />
         </Route>
         <Route path="*" element={<Navigate to="/auth" replace />} />

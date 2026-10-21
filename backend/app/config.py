@@ -25,6 +25,9 @@ class Settings(BaseSettings):
     kulteo_base_url: str = ""
     kulteo_api_key: str = ""
     kulteo_tenant: str = "compass"
+    kulteo_offers_url: str = ""
+    kulteo_offers_typology: str = "OFERTA"
+    offer_sync_seconds: int = 600
 
     @property
     def cors_origin_list(self) -> list[str]:

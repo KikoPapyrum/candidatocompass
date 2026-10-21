@@ -1,5 +1,6 @@
 """FastAPI application entry point."""
 
+import asyncio
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -9,16 +10,23 @@ from starlette.responses import JSONResponse
 
 from app.config import settings
 from app.database import connect, disconnect
-from app.routers import auth, candidates, inbound
+from app.routers import auth, candidates, inbound, offers
+from app.services.offer_sync import offer_sync_loop
 from app.utils.catalogs import load_catalogs
 from app.utils.exceptions import DomainError
 
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
-    """Connect to MongoDB while the process is running."""
+    """Connect to MongoDB and refresh the offer cache while the process is running."""
     await connect()
+    sync_task = asyncio.create_task(offer_sync_loop(settings.offer_sync_seconds))
     yield
+    sync_task.cancel()
+    try:
+        await sync_task
+    except asyncio.CancelledError:
+        pass
     await disconnect()
 
 
@@ -33,6 +41,7 @@ app.add_middleware(
 app.include_router(auth.router, prefix="/auth", tags=["auth"])
 app.include_router(candidates.router, prefix="/candidates", tags=["candidates"])
 app.include_router(inbound.router)
+app.include_router(offers.router, prefix="/offers", tags=["offers"])
 
 
 @app.exception_handler(DomainError)

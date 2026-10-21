@@ -23,7 +23,65 @@ export const theme = createTheme({
       styleOverrides: { root: { backgroundColor: '#222C36' } },
     },
     MuiButton: {
-      styleOverrides: { root: { textTransform: 'none', fontWeight: 700, borderRadius: 2 } },
+      styleOverrides: {
+        root: {
+          textTransform: 'none',
+          fontWeight: 700,
+          borderRadius: 10,
+          paddingLeft: 22,
+          paddingRight: 22,
+          boxShadow: 'none',
+        },
+        contained: {
+          color: '#fff',
+          backgroundColor: ink,
+          backgroundImage: 'linear-gradient(180deg, #2e3c4a 0%, #222C36 100%)',
+          boxShadow: '0 8px 18px rgba(34, 44, 54, 0.22)',
+          '&:hover': {
+            backgroundColor: ink,
+            backgroundImage: 'linear-gradient(180deg, #3a4a5a 0%, #222C36 100%)',
+            boxShadow: '0 8px 18px rgba(34, 44, 54, 0.28)',
+          },
+          '&.Mui-disabled': {
+            color: '#fff',
+            backgroundColor: '#c5c9ce',
+            backgroundImage: 'none',
+            boxShadow: 'none',
+          },
+        },
+        outlined: {
+          borderColor: '#e4e7ec',
+          color: ink,
+          backgroundColor: '#fff',
+          '&:hover': { borderColor: '#cfd5dd', backgroundColor: '#f7f8fa' },
+        },
+      },
+    },
+    MuiTextField: {
+      styleOverrides: {
+        root: {
+          '& .MuiInputLabel-root': {
+            position: 'static',
+            transform: 'none',
+            marginBottom: '6px',
+            fontSize: 14,
+            fontWeight: 600,
+            color: ink,
+            '&.Mui-focused, &.Mui-error, &.MuiInputLabel-shrink': { transform: 'none', color: ink },
+            '&.Mui-error': { color: '#d32f2f' },
+          },
+          '& .MuiOutlinedInput-root': {
+            borderRadius: 8,
+            backgroundColor: '#fff',
+            '& fieldset': { borderColor: '#e6e9ee', top: 0 },
+            '& fieldset legend': { display: 'none' },
+            '&:hover fieldset': { borderColor: '#cfd5dd' },
+            '&.Mui-focused fieldset': { borderColor: ink, borderWidth: 1.5 },
+            '&.Mui-disabled': { backgroundColor: '#f4f6f8' },
+          },
+          '& .MuiOutlinedInput-input': { padding: '14px 16px' },
+        },
+      },
     },
     MuiLink: {
       styleOverrides: { root: { color: compassRed, fontWeight: 600 } },

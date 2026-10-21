@@ -119,6 +119,37 @@ class AuthService:
         return user, token
 
     @staticmethod
+    async def open_account(national_id: str, email: str, password: str) -> tuple[str, str | None, User]:
+        """Create the account or accept the password of an existing one.
+
+        Returns the next step (`verify` or `authenticated`), a token when the
+        email is already confirmed, and the user.
+        """
+        normalized = _check_identity(national_id, password, email)
+        user = await User.find_one(User.national_id == normalized)
+        if user is None:
+            user = User(
+                national_id=normalized,
+                email=email.strip().lower(),
+                hashed_password=get_password_hash(password),
+            )
+            _issue_code(user, "registro")
+            await user.insert()
+            return "verify", None, user
+        if not verify_password(password, user.hashed_password):
+            raise DomainError(
+                "Este DNI ya tiene cuenta. La contraseña no coincide.",
+                status_code=403,
+            )
+        if not user.email_verified:
+            _issue_code(user, "registro")
+            user.updated_at = datetime.utcnow()
+            await user.save()
+            return "verify", None, user
+        token = create_access_token({"sub": str(user.id), "national_id": user.national_id})
+        return "authenticated", token, user
+
+    @staticmethod
     async def request_password_reset(payload: PasswordResetRequest) -> None:
         national_id = normalize_national_id(payload.national_id)
         user = await User.find_one(User.national_id == national_id)

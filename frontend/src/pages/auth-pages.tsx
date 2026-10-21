@@ -9,6 +9,7 @@ import { Link as RouterLink, useNavigate, useSearchParams } from 'react-router'
 
 import { useAuthStore } from '../auth/auth-store'
 import { CompassMark } from '../components/compass-mark'
+import { PasswordAdornment, Shake, useNotedError } from '../components/motion'
 import { axiosInstance } from '../lib/axios'
 import { isValidNationalId, isValidPassword } from '../utils/validators'
 
@@ -60,12 +61,12 @@ export function AuthFrame({ title, children }: { title: string; children: ReactN
           boxShadow: '0 28px 60px rgba(0,0,0,0.28), inset 0 1px 0 rgba(255,255,255,0.45)',
           backdropFilter: 'blur(18px)',
           '& .MuiButton-contained': {
-            bgcolor: '#fff',
             color: INK,
-            borderRadius: '10px',
+            backgroundImage: 'linear-gradient(180deg, #ffffff 0%, #f7f4ee 100%)',
+            borderRadius: 10,
             py: 1.2,
-            boxShadow: 'none',
-            '&:hover': { bgcolor: '#f4efe4' },
+            boxShadow: '0 8px 18px rgba(0,0,0,0.18)',
+            '&:hover': { backgroundImage: 'linear-gradient(180deg, #ffffff 0%, #f0ebe1 100%)' },
           },
           '& .MuiButton-text': {
             color: GOLD,
@@ -103,21 +104,31 @@ export function AuthFrame({ title, children }: { title: string; children: ReactN
   )
 }
 
-function LabeledField({ label, ...props }: TextFieldProps & { label: string }) {
+function LabeledField({ label, type, slotProps, ...props }: TextFieldProps & { label: string }) {
   const id = useId()
+  const [shown, setShown] = useState(false)
+  const password = type === 'password'
   return (
     <Box>
       <Typography component="label" htmlFor={id} sx={{ display: 'block', color: '#fff', fontWeight: 600, mb: 0.75, fontSize: 14 }}>
         {label}
       </Typography>
-      <TextField id={id} fullWidth hiddenLabel {...props} />
+      <TextField
+        id={id}
+        fullWidth
+        hiddenLabel
+        type={password && shown ? 'text' : type}
+        slotProps={{
+          ...slotProps,
+          input: {
+            ...(typeof slotProps?.input === 'object' ? slotProps.input : {}),
+            ...(password ? { endAdornment: <PasswordAdornment shown={shown} onToggle={() => setShown((value) => !value)} color={INK} /> } : {}),
+          },
+        }}
+        {...props}
+      />
     </Box>
   )
-}
-
-function useError() {
-  const [error, setError] = useState('')
-  return { error, setError }
 }
 
 function useNationalId(initial = '') {
@@ -140,7 +151,7 @@ export function SignInPage() {
   const navigate = useNavigate()
   const [params] = useSearchParams()
   const setSession = useAuthStore((state) => state.setSession)
-  const { error, setError } = useError()
+  const { error, setError, tick } = useNotedError()
   const { nationalId, onNationalIdChange } = useNationalId(params.get('national_id') ?? '')
   const [password, setPassword] = useState('')
   const [busy, setBusy] = useState(false)
@@ -169,6 +180,7 @@ export function SignInPage() {
 
   return (
     <AuthFrame title="">
+      <Shake tick={tick}>
       <Stack component="form" spacing={2} onSubmit={onSubmit}>
         {error && <Alert severity="error">{error}</Alert>}
         <LabeledField
@@ -192,13 +204,14 @@ export function SignInPage() {
         <Button component={RouterLink} to="/auth/recuperar">Olvidaste tus credenciales</Button>
         <Button component={RouterLink} to="/ayuda">Ayuda</Button>
       </Stack>
+      </Shake>
     </AuthFrame>
   )
 }
 
 export function SignUpPage() {
   const navigate = useNavigate()
-  const { error, setError } = useError()
+  const { error, setError, tick } = useNotedError()
   const { nationalId, onNationalIdChange } = useNationalId()
   const [email, setEmail] = useState('')
   const [emailRepeat, setEmailRepeat] = useState('')
@@ -233,6 +246,7 @@ export function SignUpPage() {
 
   return (
     <AuthFrame title="Regístrate">
+      <Shake tick={tick}>
       <Stack component="form" spacing={2} onSubmit={onSubmit}>
         <Alert severity="info">Al registrarte te enviaremos un código de 6 dígitos a tu email para confirmar la cuenta.</Alert>
         {error && <Alert severity="error">{error}</Alert>}
@@ -272,6 +286,7 @@ export function SignUpPage() {
         <Button type="submit" variant="contained" size="large" disabled={busy}>Regístrate</Button>
         <Button component={RouterLink} to={nationalId ? `/auth?national_id=${encodeURIComponent(nationalId)}` : '/auth'}>Accede</Button>
       </Stack>
+      </Shake>
     </AuthFrame>
   )
 }
@@ -279,7 +294,7 @@ export function SignUpPage() {
 export function VerifyPage() {
   const navigate = useNavigate()
   const [params] = useSearchParams()
-  const { error, setError } = useError()
+  const { error, setError, tick } = useNotedError()
   const { nationalId, onNationalIdChange } = useNationalId(params.get('national_id') ?? '')
   const [code, setCode] = useState('')
   const [busy, setBusy] = useState(false)
@@ -300,6 +315,7 @@ export function VerifyPage() {
 
   return (
     <AuthFrame title="Valida tu código">
+      <Shake tick={tick}>
       <Stack component="form" spacing={2} onSubmit={onSubmit}>
         <Alert severity="info">Introduce el código de 6 dígitos que te hemos enviado por email.</Alert>
         {error && <Alert severity="error">{error}</Alert>}
@@ -314,12 +330,13 @@ export function VerifyPage() {
         <Button type="submit" variant="contained" size="large" disabled={busy}>Confirma el código</Button>
         <Button component={RouterLink} to="/auth">Accede</Button>
       </Stack>
+      </Shake>
     </AuthFrame>
   )
 }
 
 export function ForgotPasswordPage() {
-  const { error, setError } = useError()
+  const { error, setError, tick } = useNotedError()
   const [done, setDone] = useState(false)
   const { nationalId, onNationalIdChange } = useNationalId()
   const [code, setCode] = useState('')
@@ -367,6 +384,7 @@ export function ForgotPasswordPage() {
           <Button component={RouterLink} to="/auth" variant="contained">Accede</Button>
         </Stack>
       ) : (
+        <Shake tick={tick}>
         <Stack component="form" spacing={2} onSubmit={phase === 'request' ? requestCode : confirm}>
           <Alert severity="info">Te enviaremos un código de 6 dígitos a tu email para cambiar la contraseña.</Alert>
           {error && <Alert severity="error">{error}</Alert>}
@@ -389,6 +407,7 @@ export function ForgotPasswordPage() {
           </Button>
           <Button component={RouterLink} to="/auth">Accede</Button>
         </Stack>
+        </Shake>
       )}
     </AuthFrame>
   )

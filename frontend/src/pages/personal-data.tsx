@@ -2,13 +2,13 @@ import Alert from '@mui/material/Alert'
 import Button from '@mui/material/Button'
 import Stack from '@mui/material/Stack'
 import TextField from '@mui/material/TextField'
-import Typography from '@mui/material/Typography'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { useNavigate } from 'react-router'
 import { z } from 'zod'
 
+import { Shake, StepFeedback, useNotedError } from '../components/motion'
 import { OptionField } from '../components/option-field'
 import { axiosInstance } from '../lib/axios'
 import { useCandidateStore } from '../store/candidate-store'
@@ -84,7 +84,8 @@ export function PersonalDataPage() {
   const candidate = useCandidateStore((state) => state.candidate)!
   const catalogs = useCandidateStore((state) => state.catalogs)!
   const setCandidate = useCandidateStore((state) => state.setCandidate)
-  const [error, setError] = useState('')
+  const { error, setError, tick } = useNotedError()
+  const [saved, setSaved] = useState(false)
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
     defaultValues: defaults(candidate),
@@ -117,15 +118,15 @@ export function PersonalDataPage() {
         disability_percent: values.disability === 'SI' ? values.disability_percent : null,
       })
       setCandidate(response.data)
-      navigate('/documentos')
+      setSaved(true)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'No se han podido guardar los datos.')
     }
   }
 
   return (
-    <Stack component="form" spacing={2} onSubmit={form.handleSubmit(onSubmit)}>
-      <Typography variant="h5">{candidate.first_name || 'Hola'}, introduce tus datos</Typography>
+    <Shake tick={tick}>
+    <Stack component="form" spacing={2} onSubmit={form.handleSubmit(onSubmit, () => setError('Revisa los campos obligatorios.'))}>
       {candidate.rejection_reason && <Alert severity="warning">{candidate.rejection_reason}</Alert>}
       {error && <Alert severity="error">{error}</Alert>}
       <TextField label="DNI/NIE" value={candidate.national_id} disabled />
@@ -166,9 +167,11 @@ export function PersonalDataPage() {
           <TextField label="Porcentaje *" {...form.register('disability_percent')} helperText="De 0 a 100" />
         </>
       )}
-      <Button type="submit" variant="contained" size="large" disabled={form.formState.isSubmitting}>
-        Guardar datos e ir a documentos
+      <Button type="submit" variant="contained" size="large" disabled={form.formState.isSubmitting || saved}>
+        Guardar y subir documentos
       </Button>
     </Stack>
+    {saved && <StepFeedback title="Datos guardados" onDone={() => navigate('/documentos')} />}
+    </Shake>
   )
 }

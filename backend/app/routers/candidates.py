@@ -1,14 +1,14 @@
 """Candidate file and document routes."""
 
 from fastapi import APIRouter, Depends, File, Form, UploadFile
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, Response
 
 from app.dependencies import get_current_candidate
 from app.models.candidate import Candidate
 from app.models.document import CandidateDocument
 from app.schemas.candidate import DocumentStatus, LegalSubmit, PersonalDataUpdate, TaxDataUpdate
 from app.services.candidate_service import EDITABLE_STEPS, CandidateService
-from app.services.document_service import DocumentService
+from app.services.document_service import DocumentService, render_pdf_preview
 from app.services.kulteo_submit import KulteoSubmitService
 from app.utils.exceptions import DomainError
 
@@ -91,6 +91,42 @@ async def complete_documents(candidate: Candidate = Depends(get_current_candidat
     """Mark the document step done when every requested file is stored."""
     saved = await DocumentService.mark_complete(candidate)
     return _candidate_payload(saved)
+
+
+@router.get("/me/documents/{document_type}/thumbnail")
+async def document_thumbnail(
+    document_type: str,
+    candidate: Candidate = Depends(get_current_candidate),
+) -> FileResponse:
+    """Return the small preview generated for one uploaded file."""
+    document = await CandidateDocument.find_one(
+        CandidateDocument.national_id == candidate.national_id,
+        CandidateDocument.document_type == document_type,
+    )
+    if document is None:
+        raise DomainError("El documento no está subido.", status_code=404)
+    path = DocumentService.ensure_thumbnail(candidate, document)
+    return FileResponse(path, media_type="image/jpeg")
+
+
+@router.get("/me/documents/{document_type}/preview")
+async def document_preview(
+    document_type: str,
+    candidate: Candidate = Depends(get_current_candidate),
+) -> Response:
+    """Return a viewable image. PDFs are rendered here because the browser viewer stays blank in the dialog."""
+    document = await CandidateDocument.find_one(
+        CandidateDocument.national_id == candidate.national_id,
+        CandidateDocument.document_type == document_type,
+    )
+    if document is None:
+        raise DomainError("El documento no está subido.", status_code=404)
+    path = DocumentService.file_path(candidate, document)
+    if not path.exists():
+        raise DomainError("El fichero no está en el almacenamiento.", status_code=404)
+    if document.content_type == "application/pdf":
+        return Response(content=render_pdf_preview(path), media_type="image/jpeg")
+    return FileResponse(path, media_type=document.content_type)
 
 
 @router.get("/me/documents/{document_type}")

@@ -94,4 +94,5 @@ export type DocumentStatus = {
   required: boolean
   uploaded: boolean
   original_filename: string | null
+  uploaded_at: string | null
 }
