@@ -64,6 +64,8 @@ export type Candidate = {
   personal_data_complete: boolean
   documents_complete: boolean
   tax_data_complete: boolean
+  step_warnings: string[]
+  warned_documents: string[]
   family_single_with_children: boolean
   family_spouse_low_income: boolean
   spouse_national_id: string | null

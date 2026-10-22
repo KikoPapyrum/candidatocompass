@@ -15,7 +15,7 @@ function HelpBody({ signedIn }: { signedIn: boolean }) {
         Si tienes alguna dificultad, escribe a documentacion.bilbao@compass-group.es.
       </Typography>
       <Typography variant="h6">Registro</Typography>
-      <Typography>Tu usuario es el DNI o NIE. La contraseña tiene al menos 8 caracteres, con mayúsculas, minúsculas y números. El email se pide dos veces porque es el canal de aviso.</Typography>
+      <Typography>Tu usuario es el DNI o NIE. El email se indica al solicitar la oferta. En el registro solo eliges la contraseña: al menos 8 caracteres, con mayúsculas, minúsculas y números.</Typography>
       <Typography>Tras registrarte, recibirás un código de 6 dígitos en tu email para confirmar la cuenta.</Typography>
       <Typography variant="h6">Uso</Typography>
       <Typography>1. Datos: rellena los campos obligatorios.</Typography>

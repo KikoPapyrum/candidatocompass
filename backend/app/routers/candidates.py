@@ -19,7 +19,7 @@ def _candidate_payload(candidate: Candidate) -> dict:
     payload = candidate.model_dump(mode="json")
     payload["id"] = str(candidate.id)
     payload.pop("revision_id", None)
-    payload["editable"] = candidate.step in EDITABLE_STEPS
+    payload["editable"] = candidate.step in EDITABLE_STEPS or bool(candidate.step_warnings)
     return payload
 
 

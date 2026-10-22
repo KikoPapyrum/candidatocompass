@@ -66,7 +66,7 @@ class DocumentService:
 
     @staticmethod
     async def save_upload(candidate: Candidate, document_type: str, upload: UploadFile) -> CandidateDocument:
-        ensure_editable(candidate)
+        await ensure_editable(candidate)
         if document_type not in candidate.required_documents or document_type not in DOCUMENT_LABELS:
             raise DomainError("Ese documento no está solicitado.")
         content_type = upload.content_type or ""
@@ -114,7 +114,7 @@ class DocumentService:
 
     @staticmethod
     async def mark_complete(candidate: Candidate) -> Candidate:
-        ensure_editable(candidate)
+        await ensure_editable(candidate)
         if not candidate.personal_data_complete:
             raise DomainError("Guarda primero los datos personales.")
         uploaded = {
@@ -127,6 +127,8 @@ class DocumentService:
         if missing:
             raise DomainError("Faltan documentos por subir.")
         candidate.documents_complete = True
+        candidate.step_warnings = [item for item in candidate.step_warnings if item != "documentos"]
+        candidate.warned_documents = []
         candidate.updated_at = datetime.utcnow()
         await candidate.save()
         return candidate

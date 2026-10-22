@@ -55,23 +55,26 @@ class AuthService:
 
     @staticmethod
     async def register(payload: RegisterRequest) -> None:
-        national_id = _check_identity(payload.national_id, payload.password, payload.email)
+        national_id = _check_identity(payload.national_id, payload.password)
         candidate = await Candidate.find_one(Candidate.national_id == national_id)
         if candidate is None:
             raise DomainError(
                 "El usuario con ese DNI/NIE no está registrado para el proceso de alta.",
                 status_code=403,
             )
+        email = (candidate.email or "").strip().lower()
+        if not is_valid_email(email):
+            raise DomainError("Falta el email de la solicitud. Vuelve a la oferta e indícalo.")
         existing = await User.find_one(User.national_id == national_id)
         if existing is not None:
             raise DomainError(
                 "El usuario ya existe. Póngase en contacto con Compass.",
                 status_code=409,
             )
-        await create_candidate_folder(candidate, payload.email)
+        await create_candidate_folder(candidate, email)
         user = User(
             national_id=national_id,
-            email=payload.email.strip().lower(),
+            email=email,
             hashed_password=get_password_hash(payload.password),
         )
         _issue_code(user, "registro")

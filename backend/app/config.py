@@ -25,6 +25,7 @@ class Settings(BaseSettings):
     kulteo_base_url: str = ""
     kulteo_api_key: str = ""
     kulteo_tenant: str = "compassgroup"
+    kulteo_parent_folder: str = "6ab2864ae7f7373723dd2229"
     kulteo_offers_url: str = ""
     kulteo_offers_typology: str = "OFERTA"
     offer_sync_seconds: int = 600

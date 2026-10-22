@@ -110,6 +110,9 @@ async def create_candidate_folder(candidate: Candidate, email: str) -> str | Non
         return None
     if not settings.kulteo_api_key:
         raise DomainError("Falta la API key de Kulteo (kpub_…).")
+    parent_folder = (settings.kulteo_parent_folder or "").strip()
+    if not parent_folder:
+        raise DomainError("Falta la carpeta padre de Kulteo (parent_folder).")
     created = await _request(
         "POST",
         url,
@@ -117,6 +120,7 @@ async def create_candidate_folder(candidate: Candidate, email: str) -> str | Non
             "name": _candidate_name(candidate),
             "type": "folder",
             "typology": "Candidato",
+            "parent_folder": parent_folder,
             "metadata": [
                 {"name": "identity_card_number", "value": candidate.national_id},
                 {"name": "first_name", "value": candidate.first_name or ""},
@@ -212,6 +216,28 @@ class KulteoSubmitService:
         metadata = expediente_metadata(candidate, formulario_145_id)
         if metadata:
             await _request("PUT", folder_url, {"metadata": metadata}, {200})
-        callback_url = f"{folder_url}/workflow-callback"
-        await _request("POST", callback_url, {"payload": {"resp": "ok"}}, {200})
+        await _resume_callback(folder, folder_url)
         return formulario_145_id
+
+
+def _is_callback_wait(folder: dict) -> bool:
+    step = str(folder.get("wf_step") or "")
+    status = str(folder.get("wf_status") or "").lower()
+    return step.lower().startswith("callback") or "callback" in status
+
+
+async def _resume_callback(folder: dict, folder_url: str) -> None:
+    """Advance the flow only when it is parked on a callback node."""
+    if not _is_callback_wait(folder):
+        logger.info(
+            "Kulteo step %s (%s) is not a callback wait; folder content was updated",
+            folder.get("wf_step"),
+            folder.get("wf_status"),
+        )
+        return
+    try:
+        await _request("POST", f"{folder_url}/workflow-callback", {"payload": {"resp": "ok"}}, {200})
+    except DomainError as exc:
+        if "not a callback wait" not in str(exc):
+            raise
+        logger.info("Kulteo rejected the callback because the step is no longer waiting")

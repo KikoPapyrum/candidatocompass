@@ -6,7 +6,9 @@ import type { Account } from '../types/domain'
 type AuthState = {
   token: string | null
   account: Account | null
+  landing: boolean
   setSession: (token: string, account: Account) => void
+  consumeLanding: () => void
   signOut: () => void
   loadAccount: () => Promise<void>
 }
@@ -14,13 +16,15 @@ type AuthState = {
 export const useAuthStore = create<AuthState>((set) => ({
   token: localStorage.getItem(ACCESS_TOKEN_KEY),
   account: null,
+  landing: false,
   setSession: (token, account) => {
     localStorage.setItem(ACCESS_TOKEN_KEY, token)
-    set({ token, account })
+    set({ token, account, landing: true })
   },
+  consumeLanding: () => set({ landing: false }),
   signOut: () => {
     localStorage.removeItem(ACCESS_TOKEN_KEY)
-    set({ token: null, account: null })
+    set({ token: null, account: null, landing: false })
   },
   loadAccount: async () => {
     const response = await axiosInstance.get<Account>('/auth/me')

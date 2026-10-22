@@ -28,13 +28,19 @@ MAX_CHILDREN = 9
 MAX_ASCENDANTS = 7
 
 
-def ensure_editable(candidate: Candidate) -> None:
+async def ensure_editable(candidate: Candidate) -> None:
     """Block changes once Compass is reviewing the file."""
-    if candidate.step not in EDITABLE_STEPS:
-        raise DomainError(
-            "La aplicación está bloqueada. El personal de Compass está verificando la información.",
-            status_code=409,
-        )
+    if candidate.step in EDITABLE_STEPS:
+        return
+    if candidate.step_warnings:
+        candidate.step = "Callback - Pendiente Candidato"
+        candidate.updated_at = datetime.utcnow()
+        await candidate.save()
+        return
+    raise DomainError(
+        "La aplicación está bloqueada. El personal de Compass está verificando la información.",
+        status_code=409,
+    )
 
 
 def _require_option(value: str, catalog: str, label: str) -> None:
@@ -228,7 +234,7 @@ class CandidateService:
 
     @staticmethod
     async def save_personal(candidate: Candidate, payload: PersonalDataUpdate) -> Candidate:
-        ensure_editable(candidate)
+        await ensure_editable(candidate)
         data = payload.model_dump()
         data["first_name"] = data["first_name"].strip()
         data["last_name"] = data["last_name"].strip()
@@ -308,7 +314,7 @@ class CandidateService:
 
     @staticmethod
     async def save_tax(candidate: Candidate, payload: TaxDataUpdate) -> Candidate:
-        ensure_editable(candidate)
+        await ensure_editable(candidate)
         if not candidate.personal_data_complete or not candidate.documents_complete:
             raise DomainError("Completa los datos personales y los documentos antes de los datos fiscales.")
         children = _validate_children(payload.children, payload.family_single_with_children)
@@ -346,7 +352,9 @@ class CandidateService:
 
     @staticmethod
     async def submit(candidate: Candidate, privacy: bool, email_ok: bool, truth: bool) -> Candidate:
-        ensure_editable(candidate)
+        await ensure_editable(candidate)
+        if candidate.step_warnings:
+            raise DomainError("Hay un aviso pendiente. Revísalo antes de enviar.")
         if not (candidate.personal_data_complete and candidate.documents_complete and candidate.tax_data_complete):
             raise DomainError("Completa datos, documentos y datos fiscales antes de finalizar.")
         if not (privacy and email_ok and truth):

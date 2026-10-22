@@ -3,6 +3,7 @@
 from datetime import datetime
 
 from app.models.candidate import Candidate
+from app.services.candidate_service import EDITABLE_STEPS
 from app.services.document_catalog import class_for_flag, flag_for_request
 from app.utils.exceptions import DomainError
 from app.utils.validators import normalize_national_id
@@ -138,6 +139,8 @@ class InboundService:
                 object_id=object_id or "",
                 step=attributes.get("step") or OPEN_STEP,
                 required_documents=sorted(requested),
+                step_warnings=["documentos"] if requested else [],
+                warned_documents=sorted(requested),
                 source_fields=source_fields,
                 created_at=now,
                 updated_at=now,
@@ -154,6 +157,11 @@ class InboundService:
             setattr(candidate, key, value)
         if requested:
             candidate.required_documents = sorted(set(candidate.required_documents) | requested)
+            if "documentos" not in candidate.step_warnings:
+                candidate.step_warnings.append("documentos")
+            candidate.warned_documents = sorted(set(candidate.warned_documents) | requested)
+            if candidate.step not in EDITABLE_STEPS:
+                candidate.step = OPEN_STEP
         candidate.source_fields = {**candidate.source_fields, **source_fields}
         candidate.updated_at = now
         await candidate.save()

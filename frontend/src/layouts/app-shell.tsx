@@ -1,4 +1,5 @@
 import CheckIcon from '@mui/icons-material/Check'
+import WarningAmberIcon from '@mui/icons-material/WarningAmber'
 import HourglassTopIcon from '@mui/icons-material/HourglassTop'
 import AccountBalanceOutlinedIcon from '@mui/icons-material/AccountBalanceOutlined'
 import DescriptionOutlinedIcon from '@mui/icons-material/DescriptionOutlined'
@@ -12,7 +13,7 @@ import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
 import CircularProgress from '@mui/material/CircularProgress'
 import Typography from '@mui/material/Typography'
-import { useEffect } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Navigate, Outlet, useLocation, useNavigate } from 'react-router'
 
 import { useAuthStore } from '../auth/auth-store'
@@ -22,12 +23,17 @@ import { useCandidateStore } from '../store/candidate-store'
 const GOLD = '#d4bc7d'
 const COMPASS_RED = '#e31837'
 const STEPS = [
-  { label: 'Datos', path: '/datos', icon: <PersonOutlineIcon />, doneKey: 'personal_data_complete' as const },
-  { label: 'Documentos', path: '/documentos', icon: <DescriptionOutlinedIcon />, doneKey: 'documents_complete' as const },
-  { label: 'Fiscal', path: '/fiscal', icon: <AccountBalanceOutlinedIcon />, doneKey: 'tax_data_complete' as const },
-  { label: 'Legal', path: '/legal', icon: <GavelOutlinedIcon />, doneKey: null },
-  { label: 'Salir', path: 'salir', icon: <LogoutOutlinedIcon />, doneKey: null },
+  { label: 'Datos', path: '/datos', icon: <PersonOutlineIcon />, doneKey: 'personal_data_complete' as const, warningKey: 'datos' },
+  { label: 'Documentos', path: '/documentos', icon: <DescriptionOutlinedIcon />, doneKey: 'documents_complete' as const, warningKey: 'documentos' },
+  { label: 'Fiscal', path: '/fiscal', icon: <AccountBalanceOutlinedIcon />, doneKey: 'tax_data_complete' as const, warningKey: 'fiscal' },
+  { label: 'Legal', path: '/legal', icon: <GavelOutlinedIcon />, doneKey: null, warningKey: 'legal' },
+  { label: 'Salir', path: 'salir', icon: <LogoutOutlinedIcon />, doneKey: null, warningKey: null },
 ]
+
+function firstWarningPath(warnings: string[]) {
+  const pending = new Set(warnings)
+  return STEPS.find((step) => step.warningKey && pending.has(step.warningKey))?.path ?? null
+}
 
 function nextStep(candidate: { personal_data_complete: boolean; documents_complete: boolean; tax_data_complete: boolean }) {
   if (!candidate.personal_data_complete) {
@@ -46,17 +52,65 @@ export function AppShell() {
   const navigate = useNavigate()
   const location = useLocation()
   const token = useAuthStore((state) => state.token)
+  const landing = useAuthStore((state) => state.landing)
+  const consumeLanding = useAuthStore((state) => state.consumeLanding)
   const signOut = useAuthStore((state) => state.signOut)
   const candidate = useCandidateStore((state) => state.candidate)
   const loading = useCandidateStore((state) => state.loading)
   const load = useCandidateStore((state) => state.load)
+  const documents = useCandidateStore((state) => state.documents)
+  const loadDocuments = useCandidateStore((state) => state.loadDocuments)
   const screenError = useCandidateStore((state) => state.screenError)
+  const [noticePath, setNoticePath] = useState<string | null>(null)
+  const [noticeReady, setNoticeReady] = useState(false)
+  const pendingNotice = useRef<string | null>(null)
 
   useEffect(() => {
-    if (token) {
-      load().catch(() => signOut())
+    if (!token) {
+      useCandidateStore.setState({ candidate: null, documents: [], loading: false })
+      return
     }
-  }, [token, load, signOut])
+    let active = true
+    load()
+      .then(() => {
+        if (!active || !useAuthStore.getState().landing) {
+          return
+        }
+        const current = useCandidateStore.getState().candidate
+        const target = firstWarningPath(current?.step_warnings ?? [])
+        if (target) {
+          pendingNotice.current = target
+          setNoticeReady(false)
+          setNoticePath(target)
+        }
+        consumeLanding()
+      })
+      .catch(() => {
+        if (active) {
+          signOut()
+        }
+      })
+    return () => {
+      active = false
+    }
+  }, [token, load, consumeLanding, signOut])
+
+  useEffect(() => {
+    if (!noticePath) {
+      return
+    }
+    let active = true
+    loadDocuments()
+      .catch(() => undefined)
+      .finally(() => {
+        if (active) {
+          setNoticeReady(true)
+        }
+      })
+    return () => {
+      active = false
+    }
+  }, [noticePath, loadDocuments])
 
   if (!token) {
     if (location.pathname === '/ayuda') {
@@ -64,7 +118,7 @@ export function AppShell() {
     }
     return <Navigate to="/auth" replace />
   }
-  if (loading || !candidate) {
+  if (landing || loading || !candidate) {
     return (
       <Box sx={{ minHeight: '100dvh', display: 'grid', placeItems: 'center' }}>
         <CircularProgress />
@@ -73,16 +127,68 @@ export function AppShell() {
   }
 
   const wizard = ['/datos', '/documentos', '/fiscal', '/legal']
-  if (!candidate.editable && wizard.includes(location.pathname)) {
+  const hasWarning = (candidate.step_warnings ?? []).length > 0
+  if (!candidate.editable && !hasWarning && wizard.includes(location.pathname)) {
     return <Navigate to="/estado" replace />
   }
 
+  const activeNotice = noticePath ?? pendingNotice.current
+  if (activeNotice) {
+    const missing = documents.filter((document) => !document.uploaded)
+    return (
+      <Box sx={{ height: '100dvh', display: 'flex', justifyContent: 'center', bgcolor: 'background.default' }}>
+        <Box sx={{ width: '100%', maxWidth: 480, height: '100dvh', bgcolor: '#fff', display: 'grid', gridTemplateRows: '1fr auto 1fr', justifyItems: 'center', textAlign: 'center', px: 3 }}>
+          <Box sx={{ alignSelf: 'center', width: 112, height: 112, borderRadius: '50%', bgcolor: '#ed6c02', display: 'grid', placeItems: 'center' }}>
+            <WarningAmberIcon sx={{ fontSize: 56, color: '#fff' }} />
+          </Box>
+          <Box>
+            <Typography variant="h5" sx={{ mb: 1.5 }}>Documentación nueva</Typography>
+            <Typography sx={{ maxWidth: 340, color: '#5c6570' }}>
+              Compass te pide estos documentos. Al cerrar este aviso pasarás a gestionarlos.
+            </Typography>
+            {candidate.rejection_reason && (
+              <Typography color="error" sx={{ maxWidth: 340, mt: 2 }}>{candidate.rejection_reason}</Typography>
+            )}
+            {!noticeReady && <CircularProgress size={22} sx={{ mt: 2 }} />}
+            {noticeReady && missing.length > 0 && (
+              <Box component="ul" sx={{ maxWidth: 340, mx: 'auto', mt: 2, mb: 0, pl: 2.5, textAlign: 'left', color: '#1c2731' }}>
+                {missing.map((document) => (
+                  <Typography key={document.document_type} component="li" sx={{ lineHeight: 1.5 }}>{document.label}</Typography>
+                ))}
+              </Box>
+            )}
+          </Box>
+          <Box sx={{ alignSelf: 'stretch', width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+            <Box sx={{ flex: 1 }} />
+            <Button
+              variant="contained"
+              size="large"
+              sx={{ width: '100%', maxWidth: 360, py: 1.2 }}
+              onClick={() => {
+                const target = activeNotice
+                pendingNotice.current = null
+                setNoticePath(null)
+                navigate(target, { replace: true })
+              }}
+            >
+              Continuar
+            </Button>
+            <Box sx={{ flex: 2 }} />
+          </Box>
+        </Box>
+      </Box>
+    )
+  }
+
   const showNav = wizard.includes(location.pathname) || location.pathname === '/ayuda'
-  const canSubmit = candidate.personal_data_complete && candidate.documents_complete && candidate.tax_data_complete
-  const upcoming = nextStep(candidate)
+  const warningPath = firstWarningPath(candidate.step_warnings ?? [])
+  const canSubmit = candidate.personal_data_complete && candidate.documents_complete && candidate.tax_data_complete && !hasWarning
+  const upcoming = warningPath
+    ? { label: `Siguiente: ${STEPS.find((step) => step.path === warningPath)?.label.toLowerCase() ?? 'documentos'}`, path: warningPath, ready: false }
+    : nextStep(candidate)
   const showGuide = wizard.includes(location.pathname) && !(screenError && upcoming.ready)
   if (location.pathname === '/legal' && !canSubmit) {
-    return <Navigate to="/datos" replace />
+    return <Navigate to={warningPath ?? '/datos'} replace />
   }
 
   return (
@@ -133,6 +239,13 @@ export function AppShell() {
               borderColor: 'divider',
               height: 72,
               '& .MuiBottomNavigationAction-root': { color: '#9aa3ad', minWidth: 0 },
+              '& .MuiBottomNavigationAction-root.Mui-disabled': {
+                opacity: 0.38,
+                color: '#d5dbe3',
+              },
+              '& .MuiBottomNavigationAction-root.Mui-disabled .MuiBottomNavigationAction-label': {
+                color: '#d5dbe3',
+              },
               '& .MuiBottomNavigationAction-root.Mui-selected': { color: GOLD },
               '& .MuiBottomNavigationAction-label': { fontSize: 11, mt: 0.5, color: 'inherit' },
               '& .Mui-selected .MuiBottomNavigationAction-label': { fontSize: 11, fontWeight: 700, color: GOLD },
@@ -140,7 +253,16 @@ export function AppShell() {
           >
             {STEPS.map((step) => {
               const done = step.doneKey ? candidate[step.doneKey] : false
-              const icon = done ? (
+              const warned = Boolean(step.warningKey && (candidate.step_warnings ?? []).includes(step.warningKey))
+              const icon = warned ? (
+                <Badge
+                  overlap="circular"
+                  badgeContent={<WarningAmberIcon sx={{ fontSize: 11, color: '#fff' }} />}
+                  sx={{ '& .MuiBadge-badge': { bgcolor: '#ed6c02', minWidth: 16, height: 16, p: 0 } }}
+                >
+                  {step.icon}
+                </Badge>
+              ) : done ? (
                 <Badge
                   overlap="circular"
                   badgeContent={<CheckIcon sx={{ fontSize: 10, color: '#fff' }} />}

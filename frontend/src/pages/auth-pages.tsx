@@ -280,9 +280,7 @@ export function SignUpPage() {
   const [params] = useSearchParams()
   const { error, setError, tick } = useNotedError()
   const { nationalId, onNationalIdChange } = useNationalId(params.get('national_id') ?? '')
-  const initialEmail = params.get('email') ?? ''
-  const [email, setEmail] = useState(initialEmail)
-  const [emailRepeat, setEmailRepeat] = useState(initialEmail)
+  const email = params.get('email') ?? ''
   const [password, setPassword] = useState('')
   const [busy, setBusy] = useState(false)
 
@@ -292,10 +290,6 @@ export function SignUpPage() {
       setError('El DNI/NIE no es correcto.')
       return
     }
-    if (email.trim().toLowerCase() !== emailRepeat.trim().toLowerCase()) {
-      setError('Los emails no son idénticos.')
-      return
-    }
     if (!isValidPassword(password)) {
       setError('La contraseña debe tener al menos 8 caracteres, con mayúsculas, minúsculas y números.')
       return
@@ -303,7 +297,7 @@ export function SignUpPage() {
     setBusy(true)
     setError('')
     try {
-      await axiosInstance.post('/auth/register', { national_id: nationalId, email, password })
+      await axiosInstance.post('/auth/register', { national_id: nationalId, password })
       navigate(`/auth/verificar?national_id=${encodeURIComponent(nationalId.toUpperCase())}`)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'No se ha podido registrar.')
@@ -318,7 +312,11 @@ export function SignUpPage() {
     <AuthCanvas subtitle={"\u00a0"}>
       <Shake tick={tick}>
         <Stack component="form" spacing={1.75} onSubmit={onSubmit} sx={lightCard}>
-          <Alert severity="info">Al registrarte te enviaremos un código de 6 dígitos a tu email para confirmar la cuenta.</Alert>
+          <Alert severity="info">
+            {email
+              ? `Al registrarte te enviaremos un código de 6 dígitos a ${email} para confirmar la cuenta.`
+              : 'Al registrarte te enviaremos un código de 6 dígitos al email de tu solicitud para confirmar la cuenta.'}
+          </Alert>
           {error && <Alert severity="error">{error}</Alert>}
           <LabeledField
             tone="onLight"
@@ -337,26 +335,6 @@ export function SignUpPage() {
             value={password}
             onChange={(event) => setPassword(event.target.value)}
             startIcon={<LockOutlinedIcon sx={{ fontSize: 18, color: '#9aa3ad' }} />}
-          />
-          <LabeledField
-            tone="onLight"
-            label="Email *"
-            name="email"
-            type="text"
-            autoComplete="off"
-            slotProps={{ htmlInput: { inputMode: 'email' } }}
-            value={email}
-            onChange={(event) => setEmail(event.target.value)}
-          />
-          <LabeledField
-            tone="onLight"
-            label="Repite el email *"
-            name="email-repeat"
-            type="text"
-            autoComplete="off"
-            slotProps={{ htmlInput: { inputMode: 'email' } }}
-            value={emailRepeat}
-            onChange={(event) => setEmailRepeat(event.target.value)}
           />
           <Button type="submit" variant="contained" size="large" fullWidth disabled={busy} sx={pillButton}>
             REGÍSTRATE

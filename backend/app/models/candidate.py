@@ -69,6 +69,8 @@ class Candidate(Document):
     personal_data_complete: bool = False
     documents_complete: bool = False
     tax_data_complete: bool = False
+    step_warnings: list[str] = Field(default_factory=list)
+    warned_documents: list[str] = Field(default_factory=list)
     family_single_with_children: bool = False
     family_spouse_low_income: bool = False
     spouse_national_id: Optional[str] = None
