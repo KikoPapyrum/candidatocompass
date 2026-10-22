@@ -12,6 +12,7 @@ from app.schemas.auth import (
     RegisterRequest,
     VerifyRequest,
 )
+from app.services.kulteo_submit import create_candidate_folder
 from app.utils.exceptions import DomainError
 from app.utils.security import create_access_token, get_password_hash, verify_password
 from app.utils.validators import (
@@ -50,7 +51,7 @@ def _check_identity(national_id: str, password: str, email: str | None = None) -
 
 
 class AuthService:
-    """Account lifecycle. The candidate file is not created here."""
+    """Account lifecycle. Completing registration opens the Candidato folder in Kulteo."""
 
     @staticmethod
     async def register(payload: RegisterRequest) -> None:
@@ -67,6 +68,7 @@ class AuthService:
                 "El usuario ya existe. Póngase en contacto con Compass.",
                 status_code=409,
             )
+        await create_candidate_folder(candidate, payload.email)
         user = User(
             national_id=national_id,
             email=payload.email.strip().lower(),
@@ -81,6 +83,9 @@ class AuthService:
         user = await User.find_one(User.national_id == national_id)
         if user is None or user.verification_purpose != "registro":
             raise DomainError("El código de verificación no es válido.")
+        candidate = await Candidate.find_one(Candidate.national_id == national_id)
+        if candidate is not None:
+            await create_candidate_folder(candidate, user.email)
         AuthService._consume_code(user, payload.code)
         user.email_verified = True
         user.updated_at = datetime.utcnow()

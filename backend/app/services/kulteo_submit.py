@@ -4,6 +4,7 @@ import base64
 import logging
 import mimetypes
 import re
+from datetime import datetime
 from typing import Any
 
 import httpx
@@ -32,8 +33,20 @@ def items_collection_url() -> str:
     return f"{root}/api/public-api/items"
 
 
+def candidate_folder_url() -> str:
+    """POST target that opens a Candidato folder and starts its flow."""
+    root = (settings.kulteo_base_url or "").strip().rstrip("/")
+    if not root:
+        return ""
+    if root.endswith("/items"):
+        return root
+    if root.endswith("/public-api"):
+        return f"{root}/items"
+    return f"{root}/public-api/items"
+
+
 def _headers() -> dict[str, str]:
-    headers = {"Accept": "application/json", "X-Tenant": settings.kulteo_tenant or "compass"}
+    headers = {"Accept": "application/json", "X-Tenant": settings.kulteo_tenant or "compassgroup"}
     if settings.kulteo_api_key:
         headers["X-API-Key"] = settings.kulteo_api_key
     return headers
@@ -79,6 +92,46 @@ async def _request(method: str, url: str, json_body: dict | None, expected: set[
             status_code=502,
         )
     return body if isinstance(body, dict) else {"body": body}
+
+
+def _candidate_name(candidate: Candidate) -> str:
+    parts = [candidate.first_name, candidate.last_name, candidate.second_last_name or ""]
+    name = " ".join(part.strip() for part in parts if part and part.strip())
+    return name or candidate.national_id
+
+
+async def create_candidate_folder(candidate: Candidate, email: str) -> str | None:
+    """Open the Candidato folder in Kulteo. The flow later stores this id on the candidate."""
+    if MONGO_ID.match((candidate.object_id or "").strip()):
+        return candidate.object_id
+    url = candidate_folder_url()
+    if not url:
+        logger.info("KULTEO_BASE_URL is empty; candidate folder not created for %s", candidate.national_id)
+        return None
+    if not settings.kulteo_api_key:
+        raise DomainError("Falta la API key de Kulteo (kpub_…).")
+    created = await _request(
+        "POST",
+        url,
+        {
+            "name": _candidate_name(candidate),
+            "type": "folder",
+            "typology": "Candidato",
+            "metadata": [
+                {"name": "identity_card_number", "value": candidate.national_id},
+                {"name": "first_name", "value": candidate.first_name or ""},
+                {"name": "email", "value": email.strip().lower()},
+            ],
+        },
+        {201},
+    )
+    folder_id = _item_id(created)
+    if not folder_id:
+        raise DomainError("Kulteo no ha devuelto el id de la carpeta del candidato.")
+    candidate.object_id = folder_id
+    candidate.updated_at = datetime.utcnow()
+    await candidate.save()
+    return folder_id
 
 
 class KulteoSubmitService:
