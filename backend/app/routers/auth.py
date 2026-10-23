@@ -6,6 +6,7 @@ from fastapi.security import OAuth2PasswordRequestForm
 from app.dependencies import get_current_user
 from app.models.user import User
 from app.schemas.auth import (
+    EmployeeLoginRequest,
     LoginRequest,
     PasswordResetConfirm,
     PasswordResetRequest,
@@ -15,6 +16,7 @@ from app.schemas.auth import (
     VerifyRequest,
 )
 from app.services.auth_service import AuthService
+from app.services.captcha_service import CaptchaService
 
 router = APIRouter()
 
@@ -39,6 +41,24 @@ async def verify(payload: VerifyRequest) -> dict:
     """Confirm the registration code."""
     await AuthService.verify(payload)
     return {"detail": "Código de validación aceptado."}
+
+
+@router.get("/captcha")
+async def captcha() -> dict:
+    """Return a one-time image challenge for the employee portal."""
+    challenge_id, image = CaptchaService.issue()
+    return {"captcha_id": challenge_id, "image": image}
+
+
+@router.post("/empleado", response_model=dict)
+async def login_employee(payload: EmployeeLoginRequest) -> dict:
+    """Sign in with DNI, email and captcha. Kulteo creates the employee beforehand."""
+    user, access_token = await AuthService.login_employee(payload)
+    return {
+        "access_token": access_token,
+        "token_type": "bearer",
+        "user": _user_response(user),
+    }
 
 
 @router.post("/login", response_model=dict)

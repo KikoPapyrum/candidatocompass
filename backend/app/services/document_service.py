@@ -128,7 +128,7 @@ class DocumentService:
             raise DomainError("Faltan documentos por subir.")
         candidate.documents_complete = True
         candidate.step_warnings = [item for item in candidate.step_warnings if item != "documentos"]
-        candidate.warned_documents = []
+        # Kept until Kulteo submit: this is the batch of newly requested files.
         candidate.updated_at = datetime.utcnow()
         await candidate.save()
         return candidate

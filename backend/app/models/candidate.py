@@ -34,6 +34,7 @@ class Candidate(Document):
     """Hiring file created by an external process, then completed by the candidate."""
 
     national_id: str
+    kind: str = "candidate"
     object_id: str = ""
     source_fields: dict = Field(default_factory=dict)
     formulario_145_item_id: Optional[str] = None

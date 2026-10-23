@@ -154,7 +154,7 @@ export function PersonalDataPage() {
   return (
     <Shake tick={tick}>
     <Stack component="form" spacing={2} onSubmit={form.handleSubmit(onSubmit, () => setError('Revisa los campos obligatorios.'))}>
-      {candidate.rejection_reason && <Alert severity="warning">{candidate.rejection_reason}</Alert>}
+      {candidate.rejection_reason && (candidate.step_warnings ?? []).length > 0 && <Alert severity="warning">{candidate.rejection_reason}</Alert>}
       {error && <Alert severity="error">{error}</Alert>}
       <FieldGroup label="Datos personales">
       <TextField label="DNI/NIE" value={candidate.national_id} disabled />

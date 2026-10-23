@@ -33,6 +33,7 @@ export type Ascendant = {
 export type Candidate = {
   id: string
   national_id: string
+  kind: 'candidate' | 'employee'
   first_name: string
   last_name: string
   second_last_name: string | null

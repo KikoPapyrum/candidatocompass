@@ -3,10 +3,18 @@
 from fastapi import APIRouter, status
 
 from app.schemas.offer import EnrollRequest
+from app.services.captcha_service import CaptchaService
 from app.services.document_service import DOCUMENT_LABELS
 from app.services.enrollment_service import EnrollmentService, load_offer
 
 router = APIRouter()
+
+
+@router.get("/captcha")
+async def captcha() -> dict:
+    """Return a one-time image challenge for the public inscription."""
+    challenge_id, image = CaptchaService.issue()
+    return {"captcha_id": challenge_id, "image": image}
 
 
 @router.get("/{code}")

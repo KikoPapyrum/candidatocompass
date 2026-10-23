@@ -6,12 +6,14 @@ from datetime import datetime, timedelta
 from app.models.candidate import Candidate
 from app.models.user import User
 from app.schemas.auth import (
+    EmployeeLoginRequest,
     LoginRequest,
     PasswordResetConfirm,
     PasswordResetRequest,
     RegisterRequest,
     VerifyRequest,
 )
+from app.services.captcha_service import CaptchaService
 from app.services.kulteo_submit import create_candidate_folder
 from app.utils.exceptions import DomainError
 from app.utils.security import create_access_token, get_password_hash, verify_password
@@ -62,6 +64,8 @@ class AuthService:
                 "El usuario con ese DNI/NIE no está registrado para el proceso de alta.",
                 status_code=403,
             )
+        if candidate.kind == "employee":
+            raise DomainError("Este DNI entra por el portal de empleados.", status_code=403)
         email = (candidate.email or "").strip().lower()
         if not is_valid_email(email):
             raise DomainError("Falta el email de la solicitud. Vuelve a la oferta e indícalo.")
@@ -101,6 +105,8 @@ class AuthService:
             raise DomainError("El DNI/NIE no es correcto.")
         user = await User.find_one(User.national_id == national_id)
         candidate = await Candidate.find_one(Candidate.national_id == national_id)
+        if candidate is not None and candidate.kind == "employee":
+            raise DomainError("Este DNI entra por el portal de empleados.", status_code=403)
         if user is None:
             if candidate is None:
                 raise DomainError(
@@ -123,6 +129,39 @@ class AuthService:
                 "El usuario con ese DNI/NIE no está registrado para el proceso de alta.",
                 status_code=403,
             )
+        token = create_access_token({"sub": str(user.id), "national_id": user.national_id})
+        return user, token
+
+    @staticmethod
+    async def login_employee(payload: EmployeeLoginRequest) -> tuple[User, str]:
+        """Sign in an employee created by Kulteo. There is no password."""
+        national_id = normalize_national_id(payload.national_id)
+        if not is_valid_national_id(national_id):
+            raise DomainError("El DNI/NIE no es correcto.")
+        email = payload.email.strip().lower()
+        if not is_valid_email(email):
+            raise DomainError("El email no es válido.")
+        CaptchaService.verify(payload.captcha_id, payload.captcha_answer)
+        candidate = await Candidate.find_one(Candidate.national_id == national_id)
+        if candidate is None or candidate.kind != "employee":
+            raise DomainError("No hay un empleado con ese DNI.", status_code=403)
+        if (candidate.email or "").strip().lower() != email:
+            raise DomainError("El correo no coincide con el del empleado.", status_code=401)
+        await create_candidate_folder(candidate, email, typology="Empleado")
+        user = await User.find_one(User.national_id == national_id)
+        if user is None:
+            user = User(
+                national_id=national_id,
+                email=email,
+                hashed_password=get_password_hash(secrets.token_urlsafe(32)),
+                email_verified=True,
+            )
+            await user.insert()
+        else:
+            user.email = email
+            user.email_verified = True
+            user.updated_at = datetime.utcnow()
+            await user.save()
         token = create_access_token({"sub": str(user.id), "national_id": user.national_id})
         return user, token
 

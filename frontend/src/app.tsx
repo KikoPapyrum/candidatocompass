@@ -6,7 +6,7 @@ import { Navigate, Route, Routes, useLocation } from 'react-router'
 
 import { useAuthStore } from './auth/auth-store'
 import { AppShell, LockedPage } from './layouts/app-shell'
-import { ForgotPasswordPage, SignInPage, SignUpPage, VerifyPage } from './pages/auth-pages'
+import { EmployeeSignInPage, ForgotPasswordPage, SignInPage, SignUpPage, VerifyPage } from './pages/auth-pages'
 import { DocumentsPage } from './pages/documents'
 import { HelpPage } from './pages/help'
 import { LegalPage } from './pages/legal'
@@ -40,6 +40,7 @@ export function App() {
       <CssBaseline />
       <Routes>
         <Route path="/oferta/:code" element={<OfferPage />} />
+        <Route path="/auth/empleado" element={<GuestOnly><EmployeeSignInPage /></GuestOnly>} />
         <Route path="/auth" element={<GuestOnly><SignInRoute /></GuestOnly>} />
         <Route path="/auth/registro" element={<GuestOnly><SignUpPage /></GuestOnly>} />
         <Route path="/auth/verificar" element={<GuestOnly><VerifyPage /></GuestOnly>} />

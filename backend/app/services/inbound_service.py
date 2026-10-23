@@ -5,6 +5,7 @@ from datetime import datetime
 from app.models.candidate import Candidate
 from app.services.candidate_service import EDITABLE_STEPS
 from app.services.document_catalog import class_for_flag, flag_for_request
+from app.services.kulteo_submit import create_candidate_folder
 from app.utils.exceptions import DomainError
 from app.utils.validators import normalize_national_id
 
@@ -86,6 +87,29 @@ def _truthy(value: object) -> bool:
     return str(value).strip().upper() in TRUTHY
 
 
+def _person_kind(data: dict) -> str | None:
+    """Return employee or candidate when the Kulteo payload says which portal this person uses."""
+    for key in ("kind", "user_type", "tipo_usuario", "TIPO_USUARIO", "typology", "TIPOLOGIA", "tipo"):
+        text = _text(_unwrap(data.get(key)))
+        if not text:
+            continue
+        folded = text.casefold()
+        if folded in {"empleado", "employee"}:
+            return "employee"
+        if folded in {"candidato", "candidate"}:
+            return "candidate"
+    return None
+
+
+async def _open_employee_folder(candidate: Candidate) -> None:
+    if candidate.kind != "employee":
+        return
+    email = (candidate.email or "").strip()
+    if not email:
+        return
+    await create_candidate_folder(candidate, email, typology="Empleado")
+
+
 def _payload_data(payload: dict) -> dict:
     metadata = payload.get("metadata")
     return metadata if isinstance(metadata, dict) else payload
@@ -131,11 +155,13 @@ class InboundService:
                 attributes[attribute] = text
 
         object_id = _text(data.get("id_object") or data.get("object_id") or attributes.get("object_id"))
+        kind = _person_kind(data)
         now = datetime.utcnow()
         candidate = await Candidate.find_one(Candidate.national_id == identity)
         if candidate is None:
             candidate = Candidate(
                 national_id=identity,
+                kind=kind or "candidate",
                 object_id=object_id or "",
                 step=attributes.get("step") or OPEN_STEP,
                 required_documents=sorted(requested),
@@ -149,22 +175,30 @@ class InboundService:
                 if key != "step":
                     setattr(candidate, key, value)
             await candidate.insert()
+            await _open_employee_folder(candidate)
             return candidate
 
+        if kind:
+            candidate.kind = kind
         if object_id:
             candidate.object_id = object_id
         for key, value in attributes.items():
             setattr(candidate, key, value)
         if requested:
-            candidate.required_documents = sorted(set(candidate.required_documents) | requested)
-            if "documentos" not in candidate.step_warnings:
-                candidate.step_warnings.append("documentos")
-            candidate.warned_documents = sorted(set(candidate.warned_documents) | requested)
-            if candidate.step not in EDITABLE_STEPS:
-                candidate.step = OPEN_STEP
+            already = set(candidate.required_documents)
+            candidate.required_documents = sorted(already | requested)
+            # A flag that was already Sí is repeated by Kulteo on every update.
+            newly = requested - already
+            if newly:
+                if "documentos" not in candidate.step_warnings:
+                    candidate.step_warnings.append("documentos")
+                candidate.warned_documents = sorted(set(candidate.warned_documents) | newly)
+                if candidate.step not in EDITABLE_STEPS:
+                    candidate.step = OPEN_STEP
         candidate.source_fields = {**candidate.source_fields, **source_fields}
         candidate.updated_at = now
         await candidate.save()
+        await _open_employee_folder(candidate)
         return candidate
 
     @staticmethod

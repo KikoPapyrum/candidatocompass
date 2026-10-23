@@ -4,19 +4,22 @@ import Typography from '@mui/material/Typography'
 import { Link as RouterLink } from 'react-router'
 
 import { useAuthStore } from '../auth/auth-store'
+import { useCandidateStore } from '../store/candidate-store'
 import { AuthCanvas, lightCard, pillButton } from './auth-pages'
 
 function HelpBody({ signedIn }: { signedIn: boolean }) {
+  const employee = useCandidateStore((state) => state.candidate?.kind) === 'employee'
   return (
     <Stack spacing={2}>
-      {signedIn && <Typography variant="h5">Bienvenido a Ready to Work</Typography>}
+      {signedIn && <Typography variant="h5">{employee ? 'Bienvenido al portal de empleados' : 'Bienvenido a Ready to Work'}</Typography>}
       <Typography>
-        Desde esta aplicación te registras como candidato. Te pediremos tus datos personales y los documentos necesarios para la contratación.
-        Si tienes alguna dificultad, escribe a documentacion.bilbao@compass-group.es.
+        {employee
+          ? 'Completa tus datos personales, los documentos y el formulario 145. Si tienes alguna dificultad, escribe a documentacion.bilbao@compass-group.es.'
+          : 'Desde esta aplicación te registras como candidato. Te pediremos tus datos personales y los documentos necesarios para la contratación. Si tienes alguna dificultad, escribe a documentacion.bilbao@compass-group.es.'}
       </Typography>
-      <Typography variant="h6">Registro</Typography>
-      <Typography>Tu usuario es el DNI o NIE. El email se indica al solicitar la oferta. En el registro solo eliges la contraseña: al menos 8 caracteres, con mayúsculas, minúsculas y números.</Typography>
-      <Typography>Tras registrarte, recibirás un código de 6 dígitos en tu email para confirmar la cuenta.</Typography>
+      {!employee && <Typography variant="h6">Registro</Typography>}
+      {!employee && <Typography>Tu usuario es el DNI o NIE. El email se indica al solicitar la oferta. En el registro solo eliges la contraseña: al menos 8 caracteres, con mayúsculas, minúsculas y números.</Typography>}
+      {!employee && <Typography>Tras registrarte, recibirás un código de 6 dígitos en tu email para confirmar la cuenta.</Typography>}
       <Typography variant="h6">Uso</Typography>
       <Typography>1. Datos: rellena los campos obligatorios.</Typography>
       <Typography>2. Documentos: sube jpg, png o pdf. En el móvil puedes elegir un archivo o hacer una foto. Baja la resolución si la foto es muy grande.</Typography>

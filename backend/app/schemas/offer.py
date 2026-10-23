@@ -10,3 +10,5 @@ class EnrollRequest(BaseModel):
     second_last_name: str | None = None
     email: str
     phone: str
+    captcha_id: str
+    captcha_answer: str

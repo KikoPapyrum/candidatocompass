@@ -100,8 +100,8 @@ def _candidate_name(candidate: Candidate) -> str:
     return name or candidate.national_id
 
 
-async def create_candidate_folder(candidate: Candidate, email: str) -> str | None:
-    """Open the Candidato folder in Kulteo. The flow later stores this id on the candidate."""
+async def create_candidate_folder(candidate: Candidate, email: str, typology: str = "Candidato") -> str | None:
+    """Open the person folder in Kulteo. The flow later stores this id on the candidate."""
     if MONGO_ID.match((candidate.object_id or "").strip()):
         return candidate.object_id
     url = candidate_folder_url()
@@ -119,7 +119,7 @@ async def create_candidate_folder(candidate: Candidate, email: str) -> str | Non
         {
             "name": _candidate_name(candidate),
             "type": "folder",
-            "typology": "Candidato",
+            "typology": typology,
             "parent_folder": parent_folder,
             "metadata": [
                 {"name": "identity_card_number", "value": candidate.national_id},
@@ -131,7 +131,7 @@ async def create_candidate_folder(candidate: Candidate, email: str) -> str | Non
     )
     folder_id = _item_id(created)
     if not folder_id:
-        raise DomainError("Kulteo no ha devuelto el id de la carpeta del candidato.")
+        raise DomainError("Kulteo no ha devuelto el id de la carpeta.")
     candidate.object_id = folder_id
     candidate.updated_at = datetime.utcnow()
     await candidate.save()
@@ -170,7 +170,13 @@ class KulteoSubmitService:
             ).to_list()
         }
         classes = {flag: item for item in document_classes() for flag in item.kulteo_flags}
-        for document_type, record in stored.items():
+        pending = _uploads_for_submit(candidate, stored)
+        logger.info(
+            "Kulteo document push for %s: %s",
+            candidate.national_id,
+            ", ".join(sorted(pending)) or "(none)",
+        )
+        for document_type, record in pending.items():
             document_class = classes.get(document_type)
             if document_class is None or document_class.from_template:
                 continue
@@ -191,33 +197,68 @@ class KulteoSubmitService:
             }
             await _request("POST", collection, payload, {200, 201})
 
-        formulario_145_id = None
-        for item in document_classes():
-            if not item.from_template:
-                continue
-            extra = formulario_145_metadata(candidate) if item.id == "FORMULARIO_145" else []
-            created = await _request(
-                "POST",
-                collection,
-                {
-                    "name": item.compass_typology or item.label,
-                    "type": "document",
-                    "typology": item.compass_typology or item.label,
-                    "parent_folder": expediente_id,
-                    "metadata": [dict(DOCUMENT_ORIGIN), *extra],
-                },
-                {200, 201},
-            )
-            created_id = _item_id(created)
-            if item.id == "FORMULARIO_145" and created_id:
-                formulario_145_id = created_id
-                candidate.formulario_145_item_id = created_id
+        formulario_145_id = await _upsert_formulario_145(candidate, collection, expediente_id)
 
         metadata = expediente_metadata(candidate, formulario_145_id)
         if metadata:
             await _request("PUT", folder_url, {"metadata": metadata}, {200})
         await _resume_callback(folder, folder_url)
+        candidate.warned_documents = []
+        candidate.updated_at = datetime.utcnow()
+        await candidate.save()
         return formulario_145_id
+
+
+def _uploads_for_submit(
+    candidate: Candidate,
+    stored: dict[str, CandidateDocument],
+) -> dict[str, CandidateDocument]:
+    """Files to create in Kulteo.
+
+    A later request only includes the documents Kulteo just marked.
+    The first push has no formulario 145 yet, so it sends every required file.
+    """
+    if candidate.warned_documents:
+        pending = set(candidate.warned_documents)
+        missing = sorted(pending - set(stored))
+        if missing:
+            raise DomainError(f"Faltan documentos por subir: {', '.join(missing)}.")
+        return {key: value for key, value in stored.items() if key in pending}
+    if MONGO_ID.match((candidate.formulario_145_item_id or "").strip()):
+        return {}
+    required = set(candidate.required_documents)
+    return {key: value for key, value in stored.items() if key in required}
+
+
+async def _upsert_formulario_145(candidate: Candidate, collection: str, expediente_id: str) -> str | None:
+    """Create form 145 the first time and update its metadata afterwards."""
+    template = next((item for item in document_classes() if item.id == "FORMULARIO_145"), None)
+    if template is None:
+        return None
+    metadata = [dict(DOCUMENT_ORIGIN), *formulario_145_metadata(candidate)]
+    existing = (candidate.formulario_145_item_id or "").strip()
+    if MONGO_ID.match(existing):
+        await _request("PUT", f"{collection}/{existing}", {"metadata": metadata}, {200})
+        return existing
+    created = await _request(
+        "POST",
+        collection,
+        {
+            "name": template.compass_typology or template.label,
+            "type": "document",
+            "typology": template.compass_typology or template.label,
+            "parent_folder": expediente_id,
+            "metadata": metadata,
+        },
+        {200, 201},
+    )
+    created_id = _item_id(created)
+    if not created_id:
+        raise DomainError("Kulteo no ha devuelto el id del formulario 145.")
+    candidate.formulario_145_item_id = created_id
+    candidate.updated_at = datetime.utcnow()
+    await candidate.save()
+    return created_id
 
 
 def _is_callback_wait(folder: dict) -> bool:

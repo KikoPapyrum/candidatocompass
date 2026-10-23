@@ -202,7 +202,7 @@ export function DocumentsPage() {
                   <Typography sx={{ fontWeight: 700, fontSize: 17, lineHeight: 1.3, color: '#1c2731' }}>
                     {document.label}
                   </Typography>
-                  <Typography sx={{ color: '#8b93a0', fontSize: 14, mt: 0.5, mb: 1.5 }}>
+                  <Typography sx={{ color: document.uploaded ? '#8b93a0' : '#ed6c02', fontSize: 14, mt: 0.5, mb: 1.5 }}>
                     {document.uploaded ? document.original_filename : 'Sin archivo'}
                   </Typography>
                 </Box>

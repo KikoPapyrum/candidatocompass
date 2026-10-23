@@ -21,7 +21,7 @@ import { menuNudgeSx } from '../components/motion'
 import { useCandidateStore } from '../store/candidate-store'
 
 const GOLD = '#d4bc7d'
-const COMPASS_RED = '#e31837'
+const NAVY = '#222C36'
 const STEPS = [
   { label: 'Datos', path: '/datos', icon: <PersonOutlineIcon />, doneKey: 'personal_data_complete' as const, warningKey: 'datos' },
   { label: 'Documentos', path: '/documentos', icon: <DescriptionOutlinedIcon />, doneKey: 'documents_complete' as const, warningKey: 'documentos' },
@@ -273,7 +273,13 @@ export function AppShell() {
               ) : step.icon
               const nudge = menuNudgeSx(step.path === upcoming.path && !upcoming.ready && location.pathname !== upcoming.path)
               const exit = step.path === 'salir'
-                ? { color: `${COMPASS_RED} !important`, '& .MuiBottomNavigationAction-label': { color: `${COMPASS_RED} !important` } }
+                ? {
+                    color: '#fff !important',
+                    bgcolor: NAVY,
+                    maxWidth: 'none',
+                    '& .MuiBottomNavigationAction-label': { color: '#fff !important' },
+                    '& .MuiSvgIcon-root': { color: '#fff' },
+                  }
                 : undefined
               return (
                 <BottomNavigationAction

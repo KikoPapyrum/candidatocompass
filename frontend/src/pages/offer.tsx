@@ -4,6 +4,7 @@ import EmojiEventsOutlinedIcon from '@mui/icons-material/EmojiEventsOutlined'
 import ForumOutlinedIcon from '@mui/icons-material/ForumOutlined'
 import HandshakeOutlinedIcon from '@mui/icons-material/HandshakeOutlined'
 import PlaceOutlinedIcon from '@mui/icons-material/PlaceOutlined'
+import RefreshOutlinedIcon from '@mui/icons-material/RefreshOutlined'
 import SchoolOutlinedIcon from '@mui/icons-material/SchoolOutlined'
 import SupportAgentOutlinedIcon from '@mui/icons-material/SupportAgentOutlined'
 import TagOutlinedIcon from '@mui/icons-material/TagOutlined'
@@ -13,6 +14,7 @@ import WorkOutlineIcon from '@mui/icons-material/WorkOutline'
 import Alert from '@mui/material/Alert'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
+import IconButton from '@mui/material/IconButton'
 import Stack from '@mui/material/Stack'
 import TextField from '@mui/material/TextField'
 import Typography from '@mui/material/Typography'
@@ -27,6 +29,11 @@ import { isValidNationalId } from '../utils/validators'
 type EnrollResult = {
   status: 'register' | 'login'
   detail: string
+}
+
+type CaptchaChallenge = {
+  captcha_id: string
+  image: string
 }
 
 const NAVY = '#222C36'
@@ -150,7 +157,19 @@ export function OfferPage() {
   const [email, setEmail] = useState('')
   const [emailRepeat, setEmailRepeat] = useState('')
   const [phone, setPhone] = useState('')
+  const [captcha, setCaptcha] = useState<CaptchaChallenge | null>(null)
+  const [captchaAnswer, setCaptchaAnswer] = useState('')
   const inscriptionRef = useRef<HTMLDivElement>(null)
+
+  async function loadCaptcha() {
+    try {
+      const response = await axiosInstance.get<CaptchaChallenge>('/offers/captcha')
+      setCaptcha(response.data)
+      setCaptchaAnswer('')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'No se ha podido cargar el captcha.')
+    }
+  }
 
   function focusInscription() {
     inscriptionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
@@ -162,6 +181,7 @@ export function OfferPage() {
       return
     }
     const frame = requestAnimationFrame(() => focusInscription())
+    void loadCaptcha()
     return () => cancelAnimationFrame(frame)
   }, [formOpen])
 
@@ -191,6 +211,10 @@ export function OfferPage() {
       setError('El móvil debe tener 9 dígitos.')
       return
     }
+    if (!captcha || !captchaAnswer.trim()) {
+      setError('Escribe el código del captcha.')
+      return
+    }
     setBusy(true)
     setError('')
     try {
@@ -201,6 +225,8 @@ export function OfferPage() {
         second_last_name: secondLastName.trim() || null,
         email,
         phone,
+        captcha_id: captcha.captcha_id,
+        captcha_answer: captchaAnswer,
       })
       const national = encodeURIComponent(nationalId.toUpperCase())
       const mail = encodeURIComponent(email.trim())
@@ -211,6 +237,7 @@ export function OfferPage() {
       navigate(`/auth/registro?national_id=${national}&email=${mail}`)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'No se ha podido completar la inscripción.')
+      void loadCaptcha()
     } finally {
       setBusy(false)
     }
@@ -311,6 +338,26 @@ export function OfferPage() {
                   <TextField label="Email *" type="email" value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="email" />
                   <TextField label="Repite el email *" type="email" value={emailRepeat} onChange={(event) => setEmailRepeat(event.target.value)} autoComplete="email" />
                   <TextField label="Móvil *" value={phone} onChange={(event) => setPhone(event.target.value)} helperText="9 dígitos" />
+                  <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} sx={{ alignItems: { sm: 'center' } }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexShrink: 0 }}>
+                      <Box
+                        component="img"
+                        alt="Captcha"
+                        src={captcha?.image ?? undefined}
+                        sx={{ width: 220, height: 64, borderRadius: '10px', border: '1px solid #e2e8f0', bgcolor: '#fff' }}
+                      />
+                      <IconButton aria-label="Otro captcha" onClick={() => void loadCaptcha()} disabled={busy} sx={{ color: NAVY }}>
+                        <RefreshOutlinedIcon />
+                      </IconButton>
+                    </Box>
+                    <TextField
+                      label="Captcha *"
+                      value={captchaAnswer}
+                      onChange={(event) => setCaptchaAnswer(event.target.value.toUpperCase())}
+                      autoComplete="off"
+                      fullWidth
+                    />
+                  </Stack>
                   <Button type="submit" variant="contained" size="large" disabled={busy}>Enviar solicitud</Button>
                 </Stack>
               </Shake>

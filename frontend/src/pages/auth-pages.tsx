@@ -1,13 +1,15 @@
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown'
+import RefreshOutlinedIcon from '@mui/icons-material/RefreshOutlined'
 import LockOutlinedIcon from '@mui/icons-material/LockOutlined'
 import Alert from '@mui/material/Alert'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
+import IconButton from '@mui/material/IconButton'
 import InputAdornment from '@mui/material/InputAdornment'
 import Stack from '@mui/material/Stack'
 import TextField, { type TextFieldProps } from '@mui/material/TextField'
 import Typography from '@mui/material/Typography'
-import { useId, useState, type FormEvent, type ReactNode } from 'react'
+import { useEffect, useId, useState, type FormEvent, type ReactNode } from 'react'
 import { Link as RouterLink, useNavigate, useSearchParams } from 'react-router'
 
 import { useAuthStore } from '../auth/auth-store'
@@ -31,13 +33,13 @@ export const pillButton = {
   '&:hover': { bgcolor: '#1b2630', backgroundImage: 'none', boxShadow: 'none' },
 }
 
-export function AuthCanvas({ subtitle, children }: { subtitle: string; children: ReactNode }) {
+export function AuthCanvas({ subtitle, brand = 'Ready to Work', children }: { subtitle: string; brand?: string; children: ReactNode }) {
   return (
     <Box sx={{ position: 'fixed', inset: 0, overflow: 'auto', bgcolor: '#eef1f4', display: 'flex', justifyContent: 'center' }}>
       <Box sx={{ width: '100%', maxWidth: 440, px: 2.5, pt: 5, pb: 4 }}>
         <Stack spacing={1.25} sx={{ alignItems: 'center', mb: 3 }}>
           <CompassMark height={58} ink />
-          <Typography variant="h4" sx={{ fontWeight: 700, color: INK, textAlign: 'center', mt: 1 }}>Ready to Work</Typography>
+          <Typography variant="h4" sx={{ fontWeight: 700, color: INK, textAlign: 'center', mt: 1 }}>{brand}</Typography>
           <Typography sx={{ color: '#8b93a0', textAlign: 'center', mt: -0.5 }}>{subtitle}</Typography>
         </Stack>
         {children}
@@ -271,6 +273,118 @@ export function SignInPage() {
             </Button>
           </Stack>
         </Shake>
+    </AuthCanvas>
+  )
+}
+
+type CaptchaChallenge = {
+  captcha_id: string
+  image: string
+}
+
+export function EmployeeSignInPage() {
+  const navigate = useNavigate()
+  const setSession = useAuthStore((state) => state.setSession)
+  const { error, setError, tick } = useNotedError()
+  const { nationalId, onNationalIdChange } = useNationalId('')
+  const [email, setEmail] = useState('')
+  const [captcha, setCaptcha] = useState<CaptchaChallenge | null>(null)
+  const [captchaAnswer, setCaptchaAnswer] = useState('')
+  const [busy, setBusy] = useState(false)
+
+  async function loadCaptcha() {
+    try {
+      const response = await axiosInstance.get<CaptchaChallenge>('/auth/captcha')
+      setCaptcha(response.data)
+      setCaptchaAnswer('')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'No se ha podido cargar el captcha.')
+    }
+  }
+
+  useEffect(() => {
+    void loadCaptcha()
+  }, [])
+
+  async function onSubmit(event: FormEvent) {
+    event.preventDefault()
+    if (!isValidNationalId(nationalId)) {
+      setError('El DNI/NIE no es correcto.')
+      return
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+      setError('El email no es válido.')
+      return
+    }
+    if (!captcha || !captchaAnswer.trim()) {
+      setError('Escribe el código del captcha.')
+      return
+    }
+    setBusy(true)
+    setError('')
+    try {
+      const response = await axiosInstance.post('/auth/empleado', {
+        national_id: nationalId,
+        email,
+        captcha_id: captcha.captcha_id,
+        captcha_answer: captchaAnswer,
+      })
+      setSession(response.data.access_token, response.data.user)
+      navigate('/datos')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'No se ha podido entrar.')
+      void loadCaptcha()
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <AuthCanvas subtitle={"\u00a0"} brand="Portal empleado">
+      <Shake tick={tick}>
+        <Stack component="form" spacing={1.75} onSubmit={onSubmit} sx={lightCard}>
+          {error && <Alert severity="error">{error}</Alert>}
+          <LabeledField
+            tone="onLight"
+            label="DNI / NIE *"
+            name="username"
+            autoComplete="username"
+            value={nationalId}
+            onChange={(event) => onNationalIdChange(event.target.value)}
+          />
+          <LabeledField
+            tone="onLight"
+            label="Correo *"
+            name="email"
+            type="email"
+            autoComplete="email"
+            value={email}
+            onChange={(event) => setEmail(event.target.value)}
+          />
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+            <Box
+              component="img"
+              alt="Captcha"
+              src={captcha?.image ?? undefined}
+              sx={{ width: 180, height: 52, borderRadius: '10px', border: '1px solid #e2e8f0', bgcolor: '#fff' }}
+            />
+            <IconButton aria-label="Otro captcha" onClick={() => void loadCaptcha()} disabled={busy} sx={{ color: INK }}>
+              <RefreshOutlinedIcon />
+            </IconButton>
+          </Box>
+          <LabeledField
+            tone="onLight"
+            label="Captcha *"
+            name="captcha"
+            autoComplete="off"
+            value={captchaAnswer}
+            onChange={(event) => setCaptchaAnswer(event.target.value.toUpperCase())}
+          />
+          <Button type="submit" variant="contained" size="large" fullWidth disabled={busy} sx={pillButton}>
+            ACCEDER
+          </Button>
+        </Stack>
+      </Shake>
     </AuthCanvas>
   )
 }

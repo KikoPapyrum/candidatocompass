@@ -153,7 +153,7 @@ export function TaxPage() {
           El formulario 145 se guarda cuando todas las casillas de documentos tienen archivo y pulsas continuar.
         </Alert>
       )}
-      {candidate.rejection_reason && <Alert severity="warning">{candidate.rejection_reason}</Alert>}
+      {candidate.rejection_reason && (candidate.step_warnings ?? []).length > 0 && <Alert severity="warning">{candidate.rejection_reason}</Alert>}
       {error && <Alert severity="error">{error}</Alert>}
 
       <Typography variant="h6">Situación familiar</Typography>

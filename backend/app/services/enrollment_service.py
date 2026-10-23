@@ -9,6 +9,7 @@ from app.models.candidate import Candidate
 from app.models.offer import JobOffer
 from app.models.user import User
 from app.schemas.offer import EnrollRequest
+from app.services.captcha_service import CaptchaService
 from app.services.inbound_service import OPEN_STEP
 from app.services.offer_sync import merge_required_documents, sync_offers
 from app.utils.exceptions import DomainError
@@ -47,6 +48,10 @@ class EnrollmentService:
         email = payload.email.strip().lower()
         if not is_valid_email(email):
             raise DomainError("El email no es válido.")
+        existing = await Candidate.find_one(Candidate.national_id == national_id)
+        if existing is not None and existing.kind == "employee":
+            raise DomainError("Este DNI entra por el portal de empleados.", status_code=403)
+        CaptchaService.verify(payload.captcha_id, payload.captcha_answer)
         second_last_name = (payload.second_last_name or "").strip() or None
         account = await User.find_one(User.national_id == national_id)
 

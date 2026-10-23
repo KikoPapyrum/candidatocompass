@@ -18,6 +18,13 @@ class LoginRequest(BaseModel):
     password: str
 
 
+class EmployeeLoginRequest(BaseModel):
+    national_id: str
+    email: str
+    captcha_id: str
+    captcha_answer: str
+
+
 class PasswordResetRequest(BaseModel):
     national_id: str
 
